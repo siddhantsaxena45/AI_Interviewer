@@ -1,8 +1,8 @@
-// frontend/src/pages/Register.jsx
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { register, reset } from '../features/auth/authSlice';
+import { toast } from 'react-toastify'; // Import toast
 
 function Register() {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', password2: '' });
@@ -14,9 +14,16 @@ function Register() {
   const { user, isLoading, isError, isSuccess, message } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    if (isError) alert(message);
-    if (isSuccess || user) navigate('/');
-    dispatch(reset());
+    if (isError) {
+      toast.error(message); // Replace alert with toast.error
+      dispatch(reset()); // Reset state immediately
+    }
+
+    if (isSuccess || user) {
+      toast.success('Account created successfully!'); // Optional success message
+      navigate('/');
+      dispatch(reset()); // Reset state immediately
+    }
   }, [user, isError, isSuccess, message, navigate, dispatch]);
 
   const onChange = (e) => {
@@ -26,7 +33,7 @@ function Register() {
   const onSubmit = (e) => {
     e.preventDefault();
     if (password !== password2) {
-      alert('Passwords do not match');
+      toast.error('Passwords do not match'); // Replace alert with toast.error
     } else {
       dispatch(register({ name, email, password }));
     }

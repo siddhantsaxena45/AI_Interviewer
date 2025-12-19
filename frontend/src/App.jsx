@@ -4,11 +4,13 @@ import Header from './components/Header';
 import Dashboard from './pages/Dashboard'; 
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Profile from './pages/Profile';
 import PrivateRoute from './components/PrivateRoute'; 
 import useSocket from './hooks/useSocket';
 import InterviewRunner from './pages/InterviewRunner'; 
 import SessionReview from './pages/SessionReview';
 import NotFound from './pages/NotFound';
+import { ToastContainer } from 'react-toastify';
 function App() {
   useSocket();
   return (
@@ -22,6 +24,7 @@ function App() {
           {/* Protected Routes */}
           <Route path='/' element={<PrivateRoute />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
             {/* Dynamic route that handles both active interview and review based on session status */}
             <Route path="/interview/:sessionId" element={<InterviewRunner />} /> 
             <Route path="/review/:sessionId" element={<SessionReview />} /> 
@@ -30,6 +33,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 }

@@ -44,18 +44,7 @@ function SessionReview() {
     const { overallScore, metrics, role, level, questions, startTime, endTime } = activeSession;
     const finalMetrics = metrics || {};
 
-    const radarData = {
-        labels: ['Tech', 'Comm', 'Conf'], // Shorter labels for mobile
-        datasets: [{
-            label: 'Level',
-            data: [finalMetrics.avgTechnical || 0, finalMetrics.avgConfidence || 0, finalMetrics.avgConfidence || 0],
-            backgroundColor: 'rgba(20, 184, 166, 0.1)',
-            borderColor: 'rgba(20, 184, 166, 1)',
-            borderWidth: 2,
-            pointBackgroundColor: '#fff',
-            pointBorderWidth: 2,
-        }],
-    };
+
 
     const barData = {
         labels: questions.map((_, i) => `Q${i + 1}`),
@@ -69,9 +58,9 @@ function SessionReview() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8 sm:space-y-12 animate-in fade-in duration-700">
-           
 
-            {/* --- Header --- */}
+
+            {/* --- Header Section --- */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-100 pb-6 sm:pb-10">
                 <div>
                     <span className="text-teal-600 font-black uppercase tracking-[0.2em] text-[10px]">Assessment Complete</span>
@@ -79,33 +68,38 @@ function SessionReview() {
                         {role} <span className="text-slate-300 font-medium lowercase block sm:inline">({level})</span>
                     </h1>
                 </div>
-               
             </div>
 
-            {/* --- Responsive Summary Stats (Horizontal Scroll on Mobile) --- */}
-            <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto pb-4 sm:pb-0 no-scrollbar snap-x">
+            {/* --- Summary Stats --- */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto pb-4 sm:pb-0 no-scrollbar snap-x">
                 {[
-                    { label: 'Overall', value: `${overallScore}%`, color: 'teal' },
-                    { label: 'Technical', value: `${finalMetrics.avgTechnical}%`, color: 'slate' },
-                    { label: 'Confidence', value: `${finalMetrics.avgConfidence}%`, color: 'slate' },
-                    { label: 'Duration', value: formatDuration(startTime, endTime), color: 'slate' }
+                    { label: 'Overall Result', value: `${overallScore}%`, color: 'teal' },
+                    { label: 'Avg Technical', value: `${finalMetrics.avgTechnical}%`, color: 'slate' },
+                    { label: 'Avg Confidence', value: `${finalMetrics.avgConfidence}%`, color: 'slate' },
+                    { label: 'Session Time', value: formatDuration(startTime, endTime), color: 'slate' }
                 ].map((stat, i) => (
-                    <div key={i} className={`min-w-[160px] flex-shrink-0 snap-center bg-white p-6 sm:p-8 rounded-3xl sm:rounded-[2.5rem] shadow-sm border-l-[8px] sm:border-l-[12px] ${stat.color === 'teal' ? 'border-teal-500' : 'border-slate-100'}`}>
+                    <div key={i} className={`min-w-[160px] snap-center bg-white p-6 sm:p-8 rounded-3xl sm:rounded-[2.5rem] shadow-sm border-l-[8px] ${stat.color === 'teal' ? 'border-teal-500' : 'border-slate-100'}`}>
                         <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">{stat.label}</p>
                         <p className={`text-2xl sm:text-4xl font-black mt-2 leading-none ${stat.color === 'teal' ? 'text-teal-600' : 'text-slate-800'}`}>{stat.value}</p>
                     </div>
                 ))}
             </div>
 
-            {/* --- Optimized Chart Layout --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
-                <div className="lg:col-span-4 bg-white p-6 sm:p-10 rounded-3xl sm:rounded-[3rem] shadow-sm border border-slate-50">
-                    <h3 className="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-[0.2em]">Capability Matrix</h3>
-                    <div className="h-48 sm:h-64"><Radar data={radarData} options={{ scales: { r: { suggestedMin: 0, suggestedMax: 100, ticks: { display: false } } }, maintainAspectRatio: false }} /></div>
-                </div>
-                <div className="lg:col-span-8 bg-white p-6 sm:p-10 rounded-3xl sm:rounded-[3rem] shadow-sm border border-slate-50">
-                    <h3 className="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-[0.2em]">Question Performance</h3>
-                    <div className="h-48 sm:h-64"><Bar data={barData} options={{ maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100, grid: { display: false } }, x: { grid: { display: false } } } }} /></div>
+            {/* --- Full Width Question Performance Chart --- */}
+            <div className="bg-white p-6 sm:p-10 rounded-3xl sm:rounded-[3rem] shadow-sm border border-slate-50">
+                <h3 className="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-[0.2em]">Per-Question Performance</h3>
+                <div className="h-64 sm:h-80">
+                    <Bar
+                        data={barData}
+                        options={{
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { beginAtZero: true, max: 100, grid: { color: '#f8fafc' } },
+                                x: { grid: { display: false } }
+                            }
+                        }}
+                    />
                 </div>
             </div>
 

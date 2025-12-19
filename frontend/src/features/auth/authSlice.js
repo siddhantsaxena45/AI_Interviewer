@@ -91,7 +91,27 @@ export const logout = createAsyncThunk('auth/logout', async () => {
   localStorage.removeItem('user');
 });
 
-
+export const updateProfile = createAsyncThunk(
+  'auth/update',
+  async (userData, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.user.token;
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      };
+      const response = await axios.put(API_URL + 'profile', userData, config);
+      if (response.data) {
+        localStorage.setItem('user', JSON.stringify(response.data));
+      }
+      return response.data;
+    } catch (error) {
+      const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
 // --- Auth Slice ---
 export const authSlice = createSlice({
   name: 'auth',
@@ -148,6 +168,17 @@ export const authSlice = createSlice({
       // Logout Case
       .addCase(logout.fulfilled, (state) => {
         state.user = null;
+      })
+      .addCase(updateProfile.pending, (state) => { state.isLoading = true; })
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        state.user = action.payload; // Update global user state with new data
+      })
+      .addCase(updateProfile.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
       });
   },
 });

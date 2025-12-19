@@ -83,7 +83,7 @@ const createSession = asyncHandler(async (req, res) => {
             // C. Map the raw questions into the structured Mongoose sub-document format
             const questionsArray = aiData.questions.map((qText, index) => ({
                 questionText: qText,
-                
+
                 questionType: 'oral',
                 isEvaluated: false,
                 isSubmitted: false,
@@ -192,10 +192,11 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 question: question.questionText,
+                question_type: question.questionType, // PASSING THE TYPE
                 role: session.role,
                 level: session.level,
-                user_answer: userSubmissionText,
-                user_code: code,
+                user_answer: userSubmissionText, // Transcribed audio
+                user_code: code, // Code from editor
             }),
         });
 
@@ -218,7 +219,7 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
 
         // Check if all questions in the entire session are now evaluated
         const allQuestionsEvaluated = session.questions.every(q => q.isEvaluated);
-        
+
         // RECALCULATION LOGIC: 
         // If the user already ended the session (status: completed) OR all questions are done,
         // we must recalculate the overall score so the Dashboard reflects the new data.
@@ -237,13 +238,13 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
             }
 
             // Save the session (includes question update + global score update)
-            await session.save(); 
-            
+            await session.save();
+
             // Push update to Frontend: This will change the 0% to the real score on the Dashboard
             pushSocketUpdate(io, userId, sessionId, 'SESSION_COMPLETED', 'Scores finalized.', session);
         } else {
             // Normal behavior: User is still in the interview
-            await session.save(); 
+            await session.save();
             pushSocketUpdate(io, userId, sessionId, 'EVALUATION_COMPLETE', `Feedback for Q${questionIdx + 1} is ready!`, session);
         }
 
@@ -293,7 +294,6 @@ const submitAnswer = asyncHandler(async (req, res) => {
     // 2. Respond immediately
     res.status(202).json({
         message: 'Answer received. Processing asynchronously...',
-        questionIndex: questionIndex,
         status: 'received',
     });
 
@@ -314,11 +314,11 @@ const calculateOverallScore = async (sessionId) => {
             $group: {
                 _id: '$_id',
                 // If a question is evaluated, use its score; otherwise, use 0.
-                avgTechnical: { 
-                    $avg: { $cond: [{ $eq: ['$questions.isEvaluated', true] }, '$questions.technicalScore', 0] } 
+                avgTechnical: {
+                    $avg: { $cond: [{ $eq: ['$questions.isEvaluated', true] }, '$questions.technicalScore', 0] }
                 },
-                avgConfidence: { 
-                    $avg: { $cond: [{ $eq: ['$questions.isEvaluated', true] }, '$questions.confidenceScore', 0] } 
+                avgConfidence: {
+                    $avg: { $cond: [{ $eq: ['$questions.isEvaluated', true] }, '$questions.confidenceScore', 0] }
                 }
             }
         },

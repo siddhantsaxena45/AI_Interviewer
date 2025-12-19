@@ -44,10 +44,12 @@ except Exception as e:
 
 
 
+# --- Updated Pydantic Schema ---
 class UnifiedEvaluationRequest(BaseModel):
     question: str
+    question_type: str  # Add this to tell AI the context
     role: str
-    level: Optional[str] = None   # Only for oral
+    level: Optional[str] = None
     user_answer: Optional[str] = None
     user_code: Optional[str] = None
 
@@ -153,25 +155,23 @@ async def transcribe_audio(file: UploadFile = File(...)):
 @app.post("/evaluate", response_model=EvaluationResponse)
 async def evaluate(request: UnifiedEvaluationRequest):
     try:
-        # 1. Determine assessment instructions based on what was provided
-        if request.user_code and request.user_answer:
+        # Determine specific instructions based on the stored Question Type
+        if request.question_type == "oral":
             assessment_instruction = (
-                "Evaluate BOTH the candidate's verbal explanation and their code implementation. "
-                "Use the verbal answer to assess confidence and clarity, and the code to assess technical accuracy."
+                "This is a CONCEPTUAL ORAL question. Focus purely on the candidate's verbal explanation. "
+                "Ignore any code blocks if provided. Grade clarity and conceptual accuracy."
             )
-        elif request.user_code:
-            assessment_instruction = "Evaluate the candidate's code implementation for correctness and efficiency."
-        elif request.user_answer:
-            assessment_instruction = "Evaluate the candidate's verbal explanation for conceptual understanding."
-        else:
-            raise HTTPException(status_code=400, detail="No answer or code provided.")
+        else: # Coding type
+            assessment_instruction = (
+                "This is a CODING CHALLENGE. Evaluate the code implementation for logic and efficiency. "
+                "Use the verbal explanation (transcription) to assess their thought process and confidence."
+            )
 
-        # 2. Strict System Prompt for JSON Mode
         system_prompt = (
             "You are a senior technical interviewer. Evaluate the candidate's submission. "
-            "Respond ONLY with a JSON object. No markdown, no backticks. "
-            "Required keys: 'technicalScore' (int 0-100), 'confidenceScore' (int 0-100), "
-            "'aiFeedback' (string), 'idealAnswer' (string)."
+            f"Context: {assessment_instruction} " # Injected dynamic instruction
+            "Respond ONLY with a JSON object. No markdown. "
+            "Required keys: 'technicalScore' (0-100), 'confidenceScore' (0-100), 'aiFeedback', 'idealAnswer'."
         )
 
         # 3. Comprehensive User Prompt

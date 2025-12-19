@@ -1,9 +1,9 @@
-// frontend/src/pages/Login.jsx
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { login, googleLogin, reset } from '../features/auth/authSlice';
 import { GoogleLogin } from '@react-oauth/google';
+import { toast } from 'react-toastify'; // Import toast
 
 function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -15,9 +15,15 @@ function Login() {
   const { user, isLoading, isError, isSuccess, message } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    if (isError) alert(message);
-    if (isSuccess || user) navigate('/');
-    dispatch(reset());
+    if (isError) {
+      toast.error(message); // Replaced alert with toast
+      dispatch(reset()); 
+    }
+
+    if (isSuccess || user) {
+      navigate('/');
+      dispatch(reset()); 
+    }
   }, [user, isError, isSuccess, message, navigate, dispatch]);
 
   const onChange = (e) => {
@@ -33,7 +39,7 @@ function Login() {
     if (credentialResponse.credential) {
       dispatch(googleLogin(credentialResponse.credential));
     } else {
-      alert('Google Login failed.');
+      toast.error('Google Login failed.'); // Replaced alert
     }
   };
 

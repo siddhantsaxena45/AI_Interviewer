@@ -5,7 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getSessionById } from '../features/sessions/sessionSlice';
 import MonacoEditor from '@monaco-editor/react';
 import axios from 'axios';
-
+import { toast } from 'react-toastify';
 const API_URL = `${import.meta.env.VITE_API_URL}/sessions/`;
 const api = axios.create({ baseURL: API_URL });
 
@@ -75,37 +75,41 @@ function InterviewRunner() {
         }
     }, [message]);
 
-const handleEndInterview = async () => {
-    // 1. Frontend Pre-check: Check local state for active submissions
-    const isProcessingLocally = Object.values(submittingStates).some(state => state === true);
+    const handleEndInterview = async () => {
 
-    if (isProcessingLocally) {
-        alert("AI is currently evaluating an answer. Please wait a moment before finishing.");
-        return;
-    }
 
-    if (!window.confirm("Are you sure? Unanswered questions will be marked 0%.")) return;
+        const isProcessingLocally = Object.values(submittingStates).some(state => state === true);
 
-    try {
-        setStatusMessage('Finalizing...');
-        setSubmittingStates(prev => ({ ...prev, global: true }));
-        
-        await api.post(`/${sessionId}/end`);
-        navigate(`/review/${sessionId}`);
-    } catch (error) {
-        // 2. Error Handling: Show the backend's "Cannot end" message to the user
-        const errorMessage = error.response?.data?.message || "Failed to end interview.";
-        alert(errorMessage); 
-        
-        // Reset the loading state so the button is clickable again
-        setSubmittingStates(prev => {
-            const newState = { ...prev };
-            delete newState.global;
-            return newState;
-        });
-        setStatusMessage('Ready');
-    }
-};
+        // 2. Check the Database state (via activeSession)
+        const isProcessingInDB = activeSession.questions.some(q => q.isSubmitted && !q.isEvaluated);
+
+        if (isProcessingLocally || isProcessingInDB) {
+            toast.warning("AI is still grading your last answer. Please wait a few seconds.");
+            return;
+        }
+
+        // We keep confirm for safety, or you can use a custom Modal later
+        if (!window.confirm("Are you sure? Unanswered questions will be marked 0%.")) return;
+
+        try {
+            setStatusMessage('Finalizing...');
+            setSubmittingStates(prev => ({ ...prev, global: true }));
+
+            await api.post(`/${sessionId}/end`);
+            toast.success("Interview completed! Redirecting to review..."); // 3. Added success feedback
+            navigate(`/review/${sessionId}`);
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || "Failed to end interview.";
+            toast.error(errorMessage); // 4. Replaced alert
+
+            setSubmittingStates(prev => {
+                const newState = { ...prev };
+                delete newState.global;
+                return newState;
+            });
+            setStatusMessage('Ready');
+        }
+    };
     const currentDraft = drafts[currentQuestionIndex] || {
         code: currentQuestion?.userSubmittedCode || '',
         audio: null
@@ -158,7 +162,7 @@ const handleEndInterview = async () => {
             setIsRecording(true);
             setRecordingTime(0);
             timerIntervalRef.current = setInterval(() => setRecordingTime(p => p + 1), 1000);
-        } catch (error) { alert("Mic access denied."); }
+        } catch (error) { toast.error("Microphone access denied. Please check permissions."); }
     };
 
     const stopRecording = () => {
@@ -180,8 +184,10 @@ const handleEndInterview = async () => {
 
         try {
             await api.post(`/${sessionId}/submit-answer`, formData);
+            toast.info("Answer submitted. AI is processing...");
             setDrafts(prev => ({ ...prev, [subIndex]: { ...prev[subIndex], audio: null } }));
         } catch (error) {
+            toast.error("Failed to submit answer. Please try again.");
             setSubmittingStates(prev => ({ ...prev, [subIndex]: false }));
         }
     };
@@ -201,21 +207,21 @@ const handleEndInterview = async () => {
                                 type="button"
                                 onClick={() => handleNavigation(idx)}
                                 className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-all ${idx === currentQuestionIndex ? 'ring-2 sm:ring-4 ring-blue-100 bg-blue-600 scale-125' :
-                                        q.isEvaluated ? 'bg-emerald-500' :
-                                            q.isSubmitted ? 'bg-amber-400 animate-pulse' : 'bg-slate-200'
+                                    q.isEvaluated ? 'bg-emerald-500' :
+                                        q.isSubmitted ? 'bg-amber-400 animate-pulse' : 'bg-slate-200'
                                     }`}
                             />
                         ))}
                     </div>
                 </div>
-               
+
                 <button
                     type="button"
                     onClick={handleEndInterview}
                     disabled={Object.values(submittingStates).some(s => s === true)}
                     className={`w-full sm:w-auto px-6 py-2.5 text-white rounded-xl font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all ${Object.values(submittingStates).some(s => s === true)
-                            ? 'bg-slate-400 cursor-not-allowed'
-                            : 'bg-rose-600'
+                        ? 'bg-slate-400 cursor-not-allowed'
+                        : 'bg-rose-600'
                         }`}
                 >
                     {submittingStates.global ? 'Finalizing...' : 'Finish Interview'}
