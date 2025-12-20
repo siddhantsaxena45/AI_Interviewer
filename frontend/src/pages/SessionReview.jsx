@@ -19,21 +19,41 @@ const sanitizeQuestionText = (text) => {
     return text.replace(/^\d+[\s\.\)]+/, '').trim();
 };
 
-// --- HELPER: Fixes the JSON display issue seen in screenshots ---
 const formatIdealAnswer = (text) => {
     try {
         if (!text) return "Pending evaluation.";
-        // Heuristic: If it starts/ends with curly braces, it's likely the raw JSON string
-        if (text.trim().startsWith('{') && text.trim().endsWith('}')) {
-            const parsed = JSON.parse(text);
+        
+        let cleanText = text.trim();
+
+        // 1. Remove Markdown code blocks if the AI added them (e.g., ```json ... ```)
+        if (cleanText.startsWith('```')) {
+            cleanText = cleanText.replace(/^```(json)?/, '').replace(/```$/, '').trim();
+        }
+
+        // 2. Check if it's a JSON object
+        if (cleanText.startsWith('{') && cleanText.endsWith('}')) {
+            const parsed = JSON.parse(cleanText);
+            
+            // Scenario A: The "Merged" Hallucination (Fixes Screenshot 266)
+            // The AI put the score object inside the answer. We extract just the answer.
+            if (parsed.verbalAnswer || parsed.idealAnswer || parsed.idealanswer) {
+                return parsed.verbalAnswer || parsed.idealAnswer || parsed.idealanswer;
+            }
+
+            // Scenario B: Structured Explanation (Fixes Screenshot 267/268)
             const explanation = parsed.explanation || parsed.understanding || "";
             const code = parsed.code || parsed.codeExample || parsed.example || "";
-            // Return a clean string with the explanation followed by the code
-            return `${explanation}\n\n${code}`;
+            
+            if (explanation || code) {
+                return `${explanation}\n\n${code}`.trim();
+            }
         }
-        return text; // Return plain text as-is
+        
+        // Scenario C: It's just a normal string
+        return text; 
     } catch (e) {
-        return text; // Fallback
+        // If parsing fails, just show the raw text so nothing crashes
+        return text;
     }
 };
 
