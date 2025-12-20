@@ -1,12 +1,11 @@
-// frontend/src/pages/SessionReview.jsx
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useParams, Link } from 'react-router-dom';
 import { getSessionById } from '../features/sessions/sessionSlice';
-import { Chart as ChartJS, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend, CategoryScale, LinearScale, BarElement, ArcElement } from 'chart.js';
-import { Radar, Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
 
-ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend, CategoryScale, LinearScale, BarElement, ArcElement);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 const formatDuration = (start, end) => {
     if (!start || !end) return 'N/A';
@@ -18,6 +17,24 @@ const formatDuration = (start, end) => {
 
 const sanitizeQuestionText = (text) => {
     return text.replace(/^\d+[\s\.\)]+/, '').trim();
+};
+
+// --- HELPER: Fixes the JSON display issue seen in screenshots ---
+const formatIdealAnswer = (text) => {
+    try {
+        if (!text) return "Pending evaluation.";
+        // Heuristic: If it starts/ends with curly braces, it's likely the raw JSON string
+        if (text.trim().startsWith('{') && text.trim().endsWith('}')) {
+            const parsed = JSON.parse(text);
+            const explanation = parsed.explanation || parsed.understanding || "";
+            const code = parsed.code || parsed.codeExample || parsed.example || "";
+            // Return a clean string with the explanation followed by the code
+            return `${explanation}\n\n${code}`;
+        }
+        return text; // Return plain text as-is
+    } catch (e) {
+        return text; // Fallback
+    }
 };
 
 function SessionReview() {
@@ -44,12 +61,10 @@ function SessionReview() {
     const { overallScore, metrics, role, level, questions, startTime, endTime } = activeSession;
     const finalMetrics = metrics || {};
 
-
-
     const barData = {
         labels: questions.map((_, i) => `Q${i + 1}`),
         datasets: [{
-            label: 'Score',
+            label: 'Technical Score',
             data: questions.map(q => q.technicalScore || 0),
             backgroundColor: questions.map(q => (q.technicalScore || 0) > 70 ? '#10b981' : '#f59e0b'),
             borderRadius: 8,
@@ -59,8 +74,7 @@ function SessionReview() {
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8 sm:space-y-12 animate-in fade-in duration-700">
 
-
-            {/* --- Header Section --- */}
+            {/* --- Header --- */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-100 pb-6 sm:pb-10">
                 <div>
                     <span className="text-teal-600 font-black uppercase tracking-[0.2em] text-[10px]">Assessment Complete</span>
@@ -85,7 +99,7 @@ function SessionReview() {
                 ))}
             </div>
 
-            {/* --- Full Width Question Performance Chart --- */}
+            {/* --- Chart --- */}
             <div className="bg-white p-6 sm:p-10 rounded-3xl sm:rounded-[3rem] shadow-sm border border-slate-50">
                 <h3 className="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-[0.2em]">Per-Question Performance</h3>
                 <div className="h-64 sm:h-80">
@@ -103,7 +117,7 @@ function SessionReview() {
                 </div>
             </div>
 
-            {/* --- Detailed Question Review (Mobile Optimized Padding) --- */}
+            {/* --- Detailed Question Review --- */}
             <div className="space-y-6 sm:space-y-10">
                 <h3 className="text-xl sm:text-3xl font-black text-slate-900 px-2 flex items-center tracking-tighter uppercase">
                     <span className="w-8 h-8 sm:w-12 sm:h-12 bg-slate-900 text-white rounded-xl sm:rounded-2xl flex items-center justify-center mr-3 sm:mr-5 text-base sm:text-xl">✓</span>
@@ -113,6 +127,8 @@ function SessionReview() {
                     {questions.map((q, index) => (
                         <div key={index} className="bg-white rounded-3xl sm:rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden group hover:shadow-lg transition-all duration-500">
                             <div className="p-6 sm:p-10 space-y-6 sm:space-y-8">
+                                
+                                {/* Header: Question & Scores */}
                                 <div className="flex flex-col lg:flex-row justify-between items-start gap-4 sm:gap-6">
                                     <h4 className="text-lg sm:text-2xl font-bold text-slate-800 flex-1 leading-snug">
                                         <span className="text-teal-500 mr-2 font-black italic">Q{index + 1}.</span> {sanitizeQuestionText(q.questionText)}
@@ -129,6 +145,41 @@ function SessionReview() {
                                     </div>
                                 </div>
 
+                                {/* --- User's Submission Display (Corrected) --- */}
+                                <div className="space-y-3">
+                                    <label className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] block ml-1">Your Submission</label>
+                                    <div className="bg-slate-50 rounded-2xl sm:rounded-[2rem] border border-slate-100 overflow-hidden">
+                                        
+                                        {/* Display Code if available */}
+                                        {q.userSubmittedCode && q.userSubmittedCode !== "undefined" && (
+                                            <div className="p-4 sm:p-6 border-b border-slate-200 last:border-0">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Code</span>
+                                                <pre className="text-[11px] sm:text-xs font-mono text-slate-700 whitespace-pre-wrap overflow-x-auto">
+                                                    {q.userSubmittedCode}
+                                                </pre>
+                                            </div>
+                                        )}
+
+                                        {/* Display Transcript if available */}
+                                        {q.userAnswerText && (
+                                            <div className="p-4 sm:p-6">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Transcript</span>
+                                                <p className="text-xs sm:text-sm text-slate-600 italic leading-relaxed">
+                                                    "{q.userAnswerText}"
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Fallback if nothing was recorded */}
+                                        {(!q.userSubmittedCode || q.userSubmittedCode === "undefined") && !q.userAnswerText && (
+                                            <div className="p-6 text-center text-slate-400 text-xs italic">
+                                                No answer recorded.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Feedback & Ideal Answer Grid */}
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-10 pt-6 sm:pt-8 border-t border-slate-50">
                                     <div className="space-y-3">
                                         <label className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] block ml-1">AI Analytical Feedback</label>
@@ -139,7 +190,8 @@ function SessionReview() {
                                     <div className="space-y-3">
                                         <label className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] block ml-1">Ideal Implementation</label>
                                         <pre className="bg-slate-900 text-slate-400 p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] text-[11px] sm:text-[13px] overflow-x-auto whitespace-pre-wrap font-mono shadow-inner leading-relaxed">
-                                            {q.idealAnswer || 'Pending evaluation.'}
+                                            {/* Using the updated helper function here */}
+                                            {formatIdealAnswer(q.idealAnswer)}
                                         </pre>
                                     </div>
                                 </div>

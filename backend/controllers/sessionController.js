@@ -79,12 +79,11 @@ const createSession = asyncHandler(async (req, res) => {
             }
 
             const aiData = await aiResponse.json();
-
+            const codingCount = interviewType === 'coding-mix' ? Math.floor(count * 0.2) : 0;
             // C. Map the raw questions into the structured Mongoose sub-document format
             const questionsArray = aiData.questions.map((qText, index) => ({
                 questionText: qText,
-
-                questionType: 'oral',
+                questionType: index < codingCount ? 'coding' : 'oral',
                 isEvaluated: false,
                 isSubmitted: false,
             }));
@@ -134,13 +133,34 @@ const getSessionById = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Delete a session
+// @route   DELETE /api/sessions/:id
+// @access  Private
+const deleteSession = asyncHandler(async (req, res) => {
+    const session = await Session.findById(req.params.id);
+
+    if (!session) {
+        res.status(404);
+        throw new Error('Session not found');
+    }
+
+    // Check if the user owns this session
+    if (session.user.toString() !== req.user.id) {
+        res.status(401);
+        throw new Error('Not authorized');
+    }
+
+    await session.deleteOne();
+
+    res.status(200).json({ id: req.params.id });
+});
+
 const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFilePath = null, code = null) => {
-    let transcription = null;
-    let userSubmissionText = '';
+    // Initialize transcription as an empty string instead of null to avoid "null" text in AI prompts
+    let transcription = ""; 
 
     const questionIdx = typeof questionIndex === 'string' ? parseInt(questionIndex, 10) : questionIndex;
 
-    // 1. Fetch the session once at the start - this becomes our single source of truth
     const session = await Session.findById(sessionId);
     if (!session) {
         console.error(`Session ${sessionId} not found`);
@@ -153,7 +173,7 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
         return;
     }
 
-    // --- Phase 1: Transcription ---
+    // --- Phase 1: Transcription (Only if audio exists) ---
     if (audioFilePath) {
         try {
             pushSocketUpdate(io, userId, sessionId, 'AI_TRANSCRIBING', `Transcribing audio for Q${questionIdx + 1}...`);
@@ -169,18 +189,13 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
             if (!transResponse.ok) throw new Error('Transcription service failed');
 
             const transData = await transResponse.json();
-            transcription = transData.transcription;
-            userSubmissionText = transcription;
+            transcription = transData.transcription || "";
         } catch (error) {
             console.error(`Transcription Error: ${error.message}`);
-            pushSocketUpdate(io, userId, sessionId, 'TRANSCRIPTION_FAILED', `Transcription failed.`, session);
-            return;
+            // We continue even if transcription fails so the code can still be evaluated
         } finally {
-            // Clean up temporary audio file
             if (audioFilePath && fs.existsSync(audioFilePath)) fs.unlinkSync(audioFilePath);
         }
-    } else if (code) {
-        userSubmissionText = code;
     }
 
     // --- Phase 2: AI Evaluation ---
@@ -192,11 +207,11 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 question: question.questionText,
-                question_type: question.questionType, // PASSING THE TYPE
+                question_type: question.questionType, // Tells AI if it should expect code
                 role: session.role,
                 level: session.level,
-                user_answer: userSubmissionText, // Transcribed audio
-                user_code: code, // Code from editor
+                user_answer: transcription, // Dedicated transcription field
+                user_code: code || "",      // Dedicated code field
             }),
         });
 
@@ -204,12 +219,10 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
 
         const evalData = await evalResponse.json();
 
-        // --- Phase 3: Update MongoDB and Handle Global Scoring ---
-        // Update individual question data within the session object
-        question.userAnswerText = userSubmissionText;
-        if (question.questionType === 'coding') {
-            question.userSubmittedCode = code;
-        }
+        // --- Phase 3: Correct MongoDB Mapping ---
+        // Store them strictly in their respective fields
+        question.userAnswerText = transcription; 
+        question.userSubmittedCode = code || ""; 
 
         question.technicalScore = evalData.technicalScore;
         question.confidenceScore = evalData.confidenceScore;
@@ -221,8 +234,6 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
         const allQuestionsEvaluated = session.questions.every(q => q.isEvaluated);
 
         // RECALCULATION LOGIC: 
-        // If the user already ended the session (status: completed) OR all questions are done,
-        // we must recalculate the overall score so the Dashboard reflects the new data.
         if (session.status === 'completed' || allQuestionsEvaluated) {
             const scoreSummary = await calculateOverallScore(sessionId);
 
@@ -240,7 +251,6 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
             // Save the session (includes question update + global score update)
             await session.save();
 
-            // Push update to Frontend: This will change the 0% to the real score on the Dashboard
             pushSocketUpdate(io, userId, sessionId, 'SESSION_COMPLETED', 'Scores finalized.', session);
         } else {
             // Normal behavior: User is still in the interview
@@ -383,7 +393,8 @@ export {
     getSessions,
     submitAnswer,
     endSession,
-    calculateOverallScore
+    calculateOverallScore,
+    deleteSession
 };
 
 

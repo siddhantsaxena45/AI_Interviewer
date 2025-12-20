@@ -152,63 +152,90 @@ async def transcribe_audio(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 # --- LLM Evaluation Endpoint (Updated for Unified Submission) ---
+# backend/ai_service/main.py
+
 @app.post("/evaluate", response_model=EvaluationResponse)
 async def evaluate(request: UnifiedEvaluationRequest):
     try:
-        # Determine specific instructions based on the stored Question Type
+        # 1. Determine Context Instructions
         if request.question_type == "oral":
             assessment_instruction = (
                 "This is a CONCEPTUAL ORAL question. Focus purely on the candidate's verbal explanation. "
-                "Ignore any code blocks if provided. Grade clarity and conceptual accuracy."
+                "Ignore any code blocks. "
+                "CRITICAL: If the transcript is empty, nonsense (e.g. 'blah blah', 'testing'), or irrelevant to the question, SCORE 0."
             )
-        else: # Coding type
+        else:
             assessment_instruction = (
-                "This is a CODING CHALLENGE. Evaluate the code implementation for logic and efficiency. "
-                "Use the verbal explanation (transcription) to assess their thought process and confidence."
+                "This is a CODING CHALLENGE. Evaluate the code logic and efficiency. "
+                "Use the transcription only for insight into their thought process. "
+                "CRITICAL: If the code is 'undefined', empty, just comments, or random characters, SCORE 0."
             )
 
+        # 2. STRICT System Prompt (Fixes Hallucination & JSON Issues)
         system_prompt = (
-            "You are a senior technical interviewer. Evaluate the candidate's submission. "
-            f"Context: {assessment_instruction} " # Injected dynamic instruction
-            "Respond ONLY with a JSON object. No markdown. "
+            "You are a strict technical interviewer. "
+            "Do NOT hallucinate positive reviews for bad input. "
+            "RULE 1: If the answer is gibberish, irrelevant, or missing, return 'technicalScore': 0 and 'confidenceScore': 0. "
+            "RULE 2: For 'idealAnswer', provide a clean Markdown string. Do NOT return a nested JSON object. "
+            f"Context: {assessment_instruction} "
+            "Respond ONLY with a JSON object. "
             "Required keys: 'technicalScore' (0-100), 'confidenceScore' (0-100), 'aiFeedback', 'idealAnswer'."
         )
 
-        # 3. Comprehensive User Prompt
+        # 3. User Prompt
         user_prompt = (
             f"Role: {request.role}\n"
             f"Question: {request.question}\n"
-            f"Instruction: {assessment_instruction}\n"
-            f"Verbal Answer (Transcription): {request.user_answer or 'N/A'}\n"
-            f"Code Answer: {request.user_code or 'N/A'}\n"
+            f"Verbal Answer: {request.user_answer or 'No verbal answer provided'}\n"
+            f"Code Answer: {request.user_code or 'No code provided'}\n"
         )
 
-        # 4. Call Ollama using JSON format mode
+        # 4. Generate with Low Temperature (0.1 = Stricter, Less Creative)
         response = ollama.generate(
             model=OLLAMA_MODEL_NAME,
             prompt=user_prompt,
             system=system_prompt,
-            format="json", 
-            options={"temperature": 0.2}
+            format="json",
+            options={"temperature": 0.1} 
         )
 
         response_text = response["response"].strip()
         
-        # 5. Safe JSON Loading (with fallback cleanup)
+        # 5. Safe JSON Parsing & Validation
         try:
             evaluation_data = json.loads(response_text)
+            
+            # FAILSAFE: Ensure idealAnswer is a string, not a nested dict
+            if 'idealAnswer' in evaluation_data and not isinstance(evaluation_data['idealAnswer'], str):
+                evaluation_data['idealAnswer'] = json.dumps(evaluation_data['idealAnswer'])
+            
             return EvaluationResponse(**evaluation_data)
+            
         except json.JSONDecodeError:
+            # Fallback: Try to clean common JSON formatting errors
             import re
-            # Basic cleanup for newlines/tabs inside JSON strings
             fixed_text = re.sub(r'[\n\r\t]', ' ', response_text)
-            evaluation_data = json.loads(fixed_text)
-            return EvaluationResponse(**evaluation_data)
+            try:
+                evaluation_data = json.loads(fixed_text)
+                
+                if 'idealAnswer' in evaluation_data and not isinstance(evaluation_data['idealAnswer'], str):
+                    evaluation_data['idealAnswer'] = json.dumps(evaluation_data['idealAnswer'])
+                    
+                return EvaluationResponse(**evaluation_data)
+            except:
+                 # Final Resort: Return a generic failure response so the app doesn't crash
+                 print(f"CRITICAL PARSE ERROR: {response_text}")
+                 return EvaluationResponse(
+                     technicalScore=0,
+                     confidenceScore=0,
+                     aiFeedback="AI Output Error. Please review manually.",
+                     idealAnswer="Error generating answer."
+                 )
 
     except Exception as e:
-        print(f"Evaluation Error: {str(e)}")
+        print(f"Evaluation Logic Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"AI evaluation failed: {str(e)}")
-
+    
 # --- Run the application using Uvicorn ---
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=AI_SERVICE_PORT)

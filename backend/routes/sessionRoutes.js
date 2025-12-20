@@ -7,7 +7,8 @@ import {
     getSessionById, 
     getSessions, 
     submitAnswer,
-    endSession
+    endSession,
+    deleteSession
 } from '../controllers/sessionController.js';
 
 const router = express.Router();
@@ -25,7 +26,9 @@ router.route('/').get(getSessions);
 
 // @route GET /api/sessions/:id
 // @desc Get a specific session detail
-router.route('/:id').get(getSessionById);
+router.route('/:id')
+    .get(protect, getSessionById)
+    .delete(protect, deleteSession);
 
 // @route POST /api/sessions/:id/submit-answer
 // @desc Submit an answer (Triggers AI Evaluation/Transcription)
@@ -34,6 +37,7 @@ router.route('/:id/submit-answer').post(uploadSingleAudio, submitAnswer);
 
 // @route POST /api/sessions/:id/end
 // @desc End the session early
-router.route('/:id/end').post(endSession);
+router.route('/:id/end').post(endSession)
+;
 
 export default router;

@@ -7,16 +7,16 @@ const API_URL = `${import.meta.env.VITE_API_URL}/sessions/`;
 
 // Axios instance to include JWT in all requests
 const api = axios.create({
-    baseURL: API_URL,
+  baseURL: API_URL,
 });
 
 // Request interceptor to attach the token
 api.interceptors.request.use((config) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (user && user.token) {
-        config.headers.Authorization = `Bearer ${user.token}`;
-    }
-    return config;
+  const user = JSON.parse(localStorage.getItem('user'));
+  if (user && user.token) {
+    config.headers.Authorization = `Bearer ${user.token}`;
+  }
+  return config;
 });
 
 const initialState = {
@@ -52,7 +52,7 @@ export const createSession = createAsyncThunk(
   async (sessionData, thunkAPI) => {
     try {
       // The backend returns a 202 accepted response immediately
-      const response = await api.post('/', sessionData); 
+      const response = await api.post('/', sessionData);
       return response.data; // Returns the sessionId and status: 'processing'
     } catch (error) {
       const message =
@@ -66,21 +66,39 @@ export const createSession = createAsyncThunk(
 
 // 3. Get Single Session by ID
 export const getSessionById = createAsyncThunk(
-    'sessions/getOne',
-    async (sessionId, thunkAPI) => {
-      try {
-        const response = await api.get(`/${sessionId}`);
-        return response.data;
-      } catch (error) {
-        const message =
-          (error.response && error.response.data && error.response.data.message) ||
-          error.message ||
-          error.toString();
-        return thunkAPI.rejectWithValue(message);
-      }
+  'sessions/getOne',
+  async (sessionId, thunkAPI) => {
+    try {
+      const response = await api.get(`/${sessionId}`);
+      return response.data;
+    } catch (error) {
+      const message =
+        (error.response && error.response.data && error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return thunkAPI.rejectWithValue(message);
     }
+  }
 );
 
+export const deleteSession = createAsyncThunk(
+  'sessions/delete',
+  async (id, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.user.token;
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      };
+      await axios.delete(API_URL + id, config);
+      return id; // Return the ID so we can filter it out
+    } catch (error) {
+      const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
 
 // --- Session Slice ---
 export const sessionSlice = createSlice({
@@ -88,44 +106,44 @@ export const sessionSlice = createSlice({
   initialState,
   reducers: {
     reset: (state) => initialState,
-    
+
     socketUpdateSession: (state, action) => {
-        const { sessionId, status, message, session } = action.payload;
+      const { sessionId, status, message, session } = action.payload;
 
-        // 1. Always update the global message so it shows in the UI status bar
-        state.message = message; 
+      // 1. Always update the global message so it shows in the UI status bar
+      state.message = message;
 
-        // 2. Handle partial updates (status changes only)
-        if (!session && state.activeSession && state.activeSession._id === sessionId) {
-            // Find if the message contains a question index (e.g., "Q1 evaluated")
-            const qMatch = message.match(/Q(\d+)/);
-            if (qMatch) {
-                const qIdx = parseInt(qMatch[1]) - 1;
-                // Update the submitted status if we are currently transcribing/evaluating
-                if (status.includes('AI_')) {
-                    state.activeSession.questions[qIdx].isSubmitted = true;
-                }
-            }
+      // 2. Handle partial updates (status changes only)
+      if (!session && state.activeSession && state.activeSession._id === sessionId) {
+        // Find if the message contains a question index (e.g., "Q1 evaluated")
+        const qMatch = message.match(/Q(\d+)/);
+        if (qMatch) {
+          const qIdx = parseInt(qMatch[1]) - 1;
+          // Update the submitted status if we are currently transcribing/evaluating
+          if (status.includes('AI_')) {
+            state.activeSession.questions[qIdx].isSubmitted = true;
+          }
+        }
+      }
+
+      // 3. Handle full session object updates
+      if (session) {
+        // Update the active session detail if it matches the current session ID
+        if (state.activeSession && state.activeSession._id === sessionId) {
+          state.activeSession = session;
         }
 
-        // 3. Handle full session object updates
-        if (session) {
-            // Update the active session detail if it matches the current session ID
-            if (state.activeSession && state.activeSession._id === sessionId) {
-                state.activeSession = session;
-            }
-            
-            // Find and replace the session in the main history list
-            const index = state.sessions.findIndex(s => s._id === sessionId);
-            if (index !== -1) {
-                state.sessions[index] = session;
-            } else if (status === 'QUESTIONS_READY' || status === 'SESSION_COMPLETED') {
-                state.sessions.unshift(session);
-            }
+        // Find and replace the session in the main history list
+        const index = state.sessions.findIndex(s => s._id === sessionId);
+        if (index !== -1) {
+          state.sessions[index] = session;
+        } else if (status === 'QUESTIONS_READY' || status === 'SESSION_COMPLETED') {
+          state.sessions.unshift(session);
         }
+      }
     },
     setActiveSession: (state, action) => {
-        state.activeSession = action.payload;
+      state.activeSession = action.payload;
     }
   },
   extraReducers: (builder) => {
@@ -158,6 +176,19 @@ export const sessionSlice = createSlice({
       .addCase(getSessionById.fulfilled, (state, action) => {
         state.activeSession = action.payload;
       })
+      .addCase(deleteSession.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        // Filter out the deleted session from the array
+        state.sessions = state.sessions.filter(
+          (session) => session._id !== action.payload
+        );
+      })
+      .addCase(deleteSession.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
+      });
   },
 });
 
