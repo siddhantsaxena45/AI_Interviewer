@@ -19,6 +19,19 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // 1. Clear local storage
+      localStorage.removeItem('user');
+      // 2. Force redirect to login
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 const initialState = {
   sessions: [], // List of all sessions for the dashboard table
   activeSession: null, // The session currently being viewed/taken
@@ -81,18 +94,14 @@ export const getSessionById = createAsyncThunk(
   }
 );
 
+
 export const deleteSession = createAsyncThunk(
   'sessions/delete',
   async (id, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().auth.user.token;
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-      await axios.delete(API_URL + id, config);
-      return id; // Return the ID so we can filter it out
+      // Use 'api' instead of 'axios'
+      await api.delete(`/${id}`);
+      return id; 
     } catch (error) {
       const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
       return thunkAPI.rejectWithValue(message);
@@ -100,6 +109,37 @@ export const deleteSession = createAsyncThunk(
   }
 );
 
+export const submitAnswer = createAsyncThunk(
+  'sessions/submitAnswer',
+  async ({ sessionId, formData }, thunkAPI) => {
+    try {
+      const response = await api.post(`/${sessionId}/submit-answer`, formData);
+      return response.data;
+    } catch (error) {
+      const message =
+        (error.response && error.response.data && error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+// 6. End Session
+export const endSession = createAsyncThunk(
+  'sessions/endSession',
+  async (sessionId, thunkAPI) => {
+    try {
+      const response = await api.post(`/${sessionId}/end`);
+      return response.data;
+    } catch (error) {
+      const message =
+        (error.response && error.response.data && error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
 // --- Session Slice ---
 export const sessionSlice = createSlice({
   name: 'sessions',

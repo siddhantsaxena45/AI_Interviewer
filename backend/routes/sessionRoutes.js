@@ -1,7 +1,7 @@
 // backend/routes/sessionRoutes.js
 import express from 'express';
-import { protect } from '../middleware/authMiddleware.js'; // Import JWT protection
-import { uploadSingleAudio } from '../middleware/uploadMiddleware.js'; // Import audio upload middleware
+import { protect } from '../middleware/authMiddleware.js';
+import { uploadSingleAudio } from '../middleware/uploadMiddleware.js';
 import { 
     createSession, 
     getSessionById, 
@@ -13,31 +13,22 @@ import {
 
 const router = express.Router();
 
-// Apply the 'protect' middleware to ALL routes in this file
+// 🔒 Apply protection to ALL routes in this file automatically
 router.use(protect);
 
-// @route POST /api/sessions/
-// @desc Create a new interview session (Triggers AI Question Gen)
-router.route('/').post(createSession);
+// 1. Root Routes (Chained for cleanliness)
+router.route('/')
+    .post(createSession)  // Create Interview
+    .get(getSessions);    // Get All Sessions
 
-// @route GET /api/sessions/
-// @desc Get all interview sessions for the current user
-router.route('/').get(getSessions);
-
-// @route GET /api/sessions/:id
-// @desc Get a specific session detail
+// 2. ID Routes
+// Note: removed 'protect' here because router.use(protect) already handles it
 router.route('/:id')
-    .get(protect, getSessionById)
-    .delete(protect, deleteSession);
+    .get(getSessionById)   // View Details
+    .delete(deleteSession); // Delete Session
 
-// @route POST /api/sessions/:id/submit-answer
-// @desc Submit an answer (Triggers AI Evaluation/Transcription)
-// CRITICAL FIX: This line resolves the 404 error from the frontend submission.
+// 3. Action Routes
 router.route('/:id/submit-answer').post(uploadSingleAudio, submitAnswer);
-
-// @route POST /api/sessions/:id/end
-// @desc End the session early
-router.route('/:id/end').post(endSession)
-;
+router.route('/:id/end').post(endSession);
 
 export default router;

@@ -10,7 +10,7 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // Helper function to generate JWT (ES6 function style)
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: '1d', // Token expires in 1 day
+        expiresIn: '60s', // Token expires in 1 day
     });
 };
 

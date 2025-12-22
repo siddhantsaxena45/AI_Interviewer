@@ -2,18 +2,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSessionById } from '../features/sessions/sessionSlice';
+import { getSessionById, submitAnswer, endSession } from '../features/sessions/sessionSlice';
 import MonacoEditor from '@monaco-editor/react';
-import axios from 'axios';
-import { toast } from 'react-toastify';
-const API_URL = `${import.meta.env.VITE_API_URL}/sessions/`;
-const api = axios.create({ baseURL: API_URL });
 
-api.interceptors.request.use((config) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (user && user.token) config.headers.Authorization = `Bearer ${user.token}`;
-    return config;
-});
+import { toast } from 'react-toastify';
 
 // Supported Languages for Monaco
 const SUPPORTED_LANGUAGES = [
@@ -75,12 +67,9 @@ function InterviewRunner() {
         }
     }, [message]);
 
-    const handleEndInterview = async () => {
-
-
+   
+const handleEndInterview = async () => {
         const isProcessingLocally = Object.values(submittingStates).some(state => state === true);
-
-        // 2. Check the Database state (via activeSession)
         const isProcessingInDB = activeSession.questions.some(q => q.isSubmitted && !q.isEvaluated);
 
         if (isProcessingLocally || isProcessingInDB) {
@@ -88,28 +77,29 @@ function InterviewRunner() {
             return;
         }
 
-        // We keep confirm for safety, or you can use a custom Modal later
         if (!window.confirm("Are you sure? Unanswered questions will be marked 0%.")) return;
 
-        try {
-            setStatusMessage('Finalizing...');
-            setSubmittingStates(prev => ({ ...prev, global: true }));
+        setStatusMessage('Finalizing...');
+        setSubmittingStates(prev => ({ ...prev, global: true }));
 
-            await api.post(`/${sessionId}/end`);
-            toast.success("Interview completed! Redirecting to review..."); // 3. Added success feedback
-            navigate(`/review/${sessionId}`);
-        } catch (error) {
-            const errorMessage = error.response?.data?.message || "Failed to end interview.";
-            toast.error(errorMessage); // 4. Replaced alert
-
-            setSubmittingStates(prev => {
-                const newState = { ...prev };
-                delete newState.global;
-                return newState;
+        // 🔥 CHANGE: Use dispatch(endSession) instead of api.post
+        dispatch(endSession(sessionId))
+            .unwrap()
+            .then(() => {
+                toast.success("Interview completed! Redirecting to review...");
+                navigate(`/review/${sessionId}`);
+            })
+            .catch((error) => {
+                toast.error(typeof error === 'string' ? error : "Failed to end interview.");
+                setSubmittingStates(prev => {
+                    const newState = { ...prev };
+                    delete newState.global;
+                    return newState;
+                });
+                setStatusMessage('Ready');
             });
-            setStatusMessage('Ready');
-        }
     };
+
     const currentDraft = drafts[currentQuestionIndex] || {
         code: currentQuestion?.userSubmittedCode || '',
         audio: null
@@ -172,24 +162,30 @@ function InterviewRunner() {
         }
     };
 
-    const handleSubmit = async (e) => {
+   const handleSubmit = async (e) => {
         if (e) e.preventDefault();
         if (isRecording) stopRecording();
+        
         const subIndex = currentQuestionIndex;
         setSubmittingStates(prev => ({ ...prev, [subIndex]: true }));
+        
         const formData = new FormData();
         formData.append('questionIndex', subIndex.toString());
         if (currentDraft.audio) formData.append('audioFile', currentDraft.audio, `q${subIndex}.webm`);
         formData.append('code', currentDraft.code);
 
-        try {
-            await api.post(`/${sessionId}/submit-answer`, formData);
-            toast.info("Answer submitted. AI is processing...");
-            setDrafts(prev => ({ ...prev, [subIndex]: { ...prev[subIndex], audio: null } }));
-        } catch (error) {
-            toast.error("Failed to submit answer. Please try again.");
-            setSubmittingStates(prev => ({ ...prev, [subIndex]: false }));
-        }
+        // 🔥 CHANGE: Use dispatch(submitAnswer) instead of api.post
+        dispatch(submitAnswer({ sessionId, formData }))
+            .unwrap()
+            .then(() => {
+                toast.info("Answer submitted. AI is processing...");
+                setDrafts(prev => ({ ...prev, [subIndex]: { ...prev[subIndex], audio: null } }));
+                // Note: We don't set submitting state to false here because we wait for the socket update
+            })
+            .catch((error) => {
+                toast.error("Failed to submit answer.");
+                setSubmittingStates(prev => ({ ...prev, [subIndex]: false }));
+            });
     };
 
     if (!activeSession) return <div className="text-center py-20 font-black text-slate-400 animate-pulse uppercase tracking-[0.2em]">Synchronizing...</div>;
