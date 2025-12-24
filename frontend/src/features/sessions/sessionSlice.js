@@ -218,7 +218,7 @@ export const sessionSlice = createSlice({
       })
       .addCase(deleteSession.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.isSuccess = true;
+    
         // Filter out the deleted session from the array
         state.sessions = state.sessions.filter(
           (session) => session._id !== action.payload
