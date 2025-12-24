@@ -10,14 +10,14 @@ import mongoose from 'mongoose';
 const AI_SERVICE_URL = 'http://localhost:8000';
 
 // Helper function to send an update via Socket.io
-const pushSocketUpdate = (io, userId, sessionId, status, message, sessionData = null) => {
+const pushSocketUpdate = (io, userId, sessionId, status, message, session = null) => {
     // We target the user by their ID, assuming the user's socket is joined to a room named after their userId
     // (This room setup must be done on socket connection, which we will address later in server.js)
     io.to(userId.toString()).emit('sessionUpdate', {
         sessionId,
         status, // e.g., 'AI_GENERATING_QUESTIONS', 'QUESTIONS_READY', 'EVALUATION_FAILED'
         message,
-        session: sessionData,
+        session,
     });
 };
 
@@ -169,7 +169,7 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
 
     const question = session.questions[questionIdx];
     if (!question) {
-        pushSocketUpdate(io, userId, sessionId, 'EVALUATION_FAILED', `Question ${questionIdx + 1} not found.`, null);
+        pushSocketUpdate(io, userId, sessionId, 'EVALUATION_FAILED', `Q${questionIdx + 1} not found.`, null);
         return;
     }
 
