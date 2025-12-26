@@ -31,7 +31,7 @@ function Header() {
             </svg>
           </div>
           <span className="text-lg sm:text-xl font-black tracking-tighter uppercase text-white group-hover:text-teal-400 transition-colors">
-            AI <span className="text-teal-500">Int<span className="hidden xs:inline">erviewer</span></span>
+            AI <span className="text-teal-500">Int<span className="hidden sm:inline">erviewer</span></span>
           </span>
         </Link>
 
