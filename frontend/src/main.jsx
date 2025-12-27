@@ -16,12 +16,10 @@ axios.interceptors.response.use(
   (error) => {
     // Check if the error is 401 (Unauthorized) which happens when JWT expires
     if (error.response && error.response.status === 401) {
-      // A. Clear local storage to remove the old token
-      localStorage.removeItem('user');
-      
-      // B. Force redirect to login page
-      // We use window.location because we are outside the React Router context here
-      window.location.href = '/login';
+      if (!error.config.url.includes('login')) { 
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
