@@ -19,6 +19,7 @@ const server = http.createServer(app);
 const allowedOrigin = [
     'http://localhost:5174',
     'http://localhost:5173',
+    'https://ai-interviewer-phi-ten.vercel.app',
     process.env.FRONTEND_URL,
 ].filter(Boolean);
 
