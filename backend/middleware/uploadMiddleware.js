@@ -1,15 +1,20 @@
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 
 
 const storage = multer.diskStorage({
     destination(req, file, cb) {
-        cb(null, "uploads/");
+        const uploadPath = "uploads/";
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
+        cb(null, uploadPath);
     },
     filename(req, file, cb) {
-        const ext=path.extname(file.originalname);
+        const ext = path.extname(file.originalname);
         
-        const sessionId=req.params.id || 'unknown';
+        const sessionId = req.params.id || 'unknown';
         cb(null, `${sessionId}-${Date.now()}${ext}`);
     },
 }); 
