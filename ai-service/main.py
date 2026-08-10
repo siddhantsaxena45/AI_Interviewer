@@ -15,7 +15,7 @@ import asyncio
 
 load_dotenv()
 
-AI_SERVICE_PORT = int(os.getenv("AI_SERVICE_PORT", 8000))
+AI_SERVICE_PORT = int(os.getenv("PORT", os.getenv("AI_SERVICE_PORT", 8000)))
 GEMINI_MODEL_NAME = "gemini-2.5-flash"
 
 app = FastAPI(title="AI Interviewer Microservice", version="1.0")
