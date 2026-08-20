@@ -16,11 +16,15 @@ const App = () => {
   useSocket();
   
   useEffect(() => {
-    // Ping the backend to wake up both Node.js and Python AI services on Render
+    // Ping the backend to wake up Node.js service on Render
     const BACKEND_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || '';
     if (BACKEND_URL) {
-      fetch(`${BACKEND_URL}/`).catch(err => console.log('Wake-up ping failed:', err));
+      fetch(`${BACKEND_URL}/`).catch(err => console.log('Backend wake-up ping failed:', err));
     }
+    
+    // Ping the Python AI service directly to wake it up in parallel
+    const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || 'https://ai-interviewer-nx1f.onrender.com/';
+    fetch(AI_SERVICE_URL).catch(err => console.log('AI Service wake-up ping failed:', err));
   }, []);
   return (
     <div className='min-h-screen bg-gray-50'>

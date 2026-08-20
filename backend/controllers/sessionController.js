@@ -10,7 +10,7 @@ import mongoose from 'mongoose';
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
 // Helper function to handle Render's sleeping instances by retrying
-const fetchWithRetry = async (url, options = {}, retries = 15, delayMs = 5000) => {
+const fetchWithRetry = async (url, options = {}, retries = 30, delayMs = 5000) => {
     for (let i = 0; i < retries; i++) {
         try {
             const response = await fetch(url, options);
@@ -24,8 +24,8 @@ const fetchWithRetry = async (url, options = {}, retries = 15, delayMs = 5000) =
             }
             
             if (!response.ok) {
-                // 502/503 might occur during Render spin-up
-                if (response.status === 502 || response.status === 503) {
+                // 502/503/429 might occur during Render spin-up or rate limiting
+                if (response.status === 502 || response.status === 503 || response.status === 429) {
                     console.log(`[Attempt ${i + 1}] Received ${response.status} from ${url}. Retrying in ${delayMs/1000}s...`);
                     await new Promise(resolve => setTimeout(resolve, delayMs));
                     continue;
