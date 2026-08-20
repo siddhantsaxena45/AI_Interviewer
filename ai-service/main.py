@@ -54,7 +54,7 @@ class RotatingGeminiClient:
 gemini_manager = RotatingGeminiClient()
 
 async def generate_with_retry(client=None, client_manager=None, **kwargs):
-    max_retries = 3
+    max_retries = 10
     current_client = client or (client_manager.get_client() if client_manager else None)
     if not current_client:
         raise ValueError("Either client or client_manager must be provided")
@@ -64,11 +64,13 @@ async def generate_with_retry(client=None, client_manager=None, **kwargs):
             return await current_client.aio.models.generate_content(**kwargs)
         except APIError as e:
             if attempt < max_retries - 1 and e.code in [429, 503]:
-                print(f"Gemini API Error (Code {e.code}). Retrying in {2 ** attempt}s...")
                 if e.code == 429 and client_manager:
                     print("Rotating API key due to 429 Too Many Requests...")
                     current_client = client_manager.get_client()
-                await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(0.5)
+                else:
+                    print(f"Gemini API Error (Code {e.code}). Retrying in {2 ** attempt}s...")
+                    await asyncio.sleep(2 ** attempt)
             else:
                 raise
 
