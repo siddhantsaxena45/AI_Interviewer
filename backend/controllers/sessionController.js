@@ -9,6 +9,41 @@ import mongoose from 'mongoose';
 // URL for the Python AI Microservice (Must match Step 6 setup)
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
+// Helper function to handle Render's sleeping instances by retrying
+const fetchWithRetry = async (url, options = {}, retries = 15, delayMs = 5000) => {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(url, options);
+            const contentType = response.headers.get("content-type");
+            
+            // Render loading page returns HTML instead of JSON
+            if (contentType && contentType.includes("text/html")) {
+                console.log(`[Attempt ${i + 1}] Received HTML from ${url}. Render instance waking up. Retrying in ${delayMs/1000}s...`);
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+                continue;
+            }
+            
+            if (!response.ok) {
+                // 502/503 might occur during Render spin-up
+                if (response.status === 502 || response.status === 503) {
+                    console.log(`[Attempt ${i + 1}] Received ${response.status} from ${url}. Retrying in ${delayMs/1000}s...`);
+                    await new Promise(resolve => setTimeout(resolve, delayMs));
+                    continue;
+                }
+                const errorText = await response.text();
+                throw new Error(`AI Service error: ${response.status} - ${errorText}`);
+            }
+            
+            return response;
+        } catch (error) {
+            if (i === retries - 1) throw error;
+            console.log(`[Attempt ${i + 1}] Fetch failed: ${error.message}. Retrying in ${delayMs/1000}s...`);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+    }
+    throw new Error(`Failed to fetch ${url} after ${retries} retries.`);
+};
+
 // Helper function to send an update via Socket.io
 const pushSocketUpdate = (io, userId, sessionId, status, message, session = null) => {
     // We target the user by their ID, assuming the user's socket is joined to a room named after their userId
@@ -60,9 +95,8 @@ const createSession = asyncHandler(async (req, res) => {
             // A. Notify the user via Socket.io that processing has started
             pushSocketUpdate(io, userId, session._id, 'AI_GENERATING_QUESTIONS', `Generating initial question for ${role}...`);
 
-            // B. Call the Python AI Microservice
-            // backend/controllers/sessionController.js inside createSession
-            const aiResponse = await fetch(`${AI_SERVICE_URL}/generate-questions`, {
+            // B. Call the Python AI Microservice with retry logic
+            const aiResponse = await fetchWithRetry(`${AI_SERVICE_URL}/generate-questions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -72,12 +106,6 @@ const createSession = asyncHandler(async (req, res) => {
                     interview_type: interviewType 
                 }),
             });
-
-            if (!aiResponse.ok) {
-                // If the AI service returns a non-200 status
-                const errorBody = await aiResponse.text();
-                throw new Error(`AI Service error: ${aiResponse.status} - ${errorBody}`);
-            }
 
             const aiData = await aiResponse.json();
             const codingCount = interviewType === 'coding-mix' ? 1 : 0;
@@ -184,13 +212,11 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
             const formData = new FormData();
             formData.append('file', fs.createReadStream(audioFilePath));
 
-            const transResponse = await fetch(`${AI_SERVICE_URL}/transcribe`, {
+            const transResponse = await fetchWithRetry(`${AI_SERVICE_URL}/transcribe`, {
                 method: 'POST',
                 body: formData,
                 headers: formData.getHeaders(),
             });
-
-            if (!transResponse.ok) throw new Error('Transcription service failed');
 
             const transData = await transResponse.json();
             transcription = transData.transcription || "";
@@ -206,20 +232,18 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
     try {
         pushSocketUpdate(io, userId, sessionId, 'AI_EVALUATING', `AI is analyzing Q${questionIdx + 1}...`);
 
-        const evalResponse = await fetch(`${AI_SERVICE_URL}/evaluate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                question: question.questionText,
-                question_type: question.questionType, // Tells AI if it should expect code
-                role: session.role,
-                level: session.level,
-                user_answer: transcription, // Dedicated transcription field
-                user_code: code || "",      // Dedicated code field
-            }),
-        });
-
-        if (!evalResponse.ok) throw new Error('AI Evaluation service failed');
+        const evalResponse = await fetchWithRetry(`${AI_SERVICE_URL}/evaluate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    question: question.questionText,
+                    question_type: question.questionType, // Tells AI if it should expect code
+                    role: session.role,
+                    level: session.level,
+                    user_answer: transcription, // Dedicated transcription field
+                    user_code: code || "",      // Dedicated code field
+                }),
+            });
 
         const evalData = await evalResponse.json();
 
@@ -261,7 +285,7 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
                 pushSocketUpdate(io, userId, sessionId, 'AI_GENERATING_QUESTIONS', 'Generating next adaptive question...');
                 
                 try {
-                    const nextQResponse = await fetch(`${AI_SERVICE_URL}/generate-next-question`, {
+                    const nextQResponse = await fetchWithRetry(`${AI_SERVICE_URL}/generate-next-question`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -275,15 +299,13 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
                         }),
                     });
 
-                    if (nextQResponse.ok) {
-                        const nextQData = await nextQResponse.json();
-                        session.questions.push({
-                            questionText: nextQData.question,
-                            questionType: nextQData.questionType || 'oral',
-                            isEvaluated: false,
-                            isSubmitted: false,
-                        });
-                    }
+                    const nextQData = await nextQResponse.json();
+                    session.questions.push({
+                        questionText: nextQData.question,
+                        questionType: nextQData.questionType || 'oral',
+                        isEvaluated: false,
+                        isSubmitted: false,
+                    });
                 } catch (e) {
                     console.error("Failed to generate next question:", e);
                 }
