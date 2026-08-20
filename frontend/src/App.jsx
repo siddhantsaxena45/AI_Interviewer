@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import useSocket from './hooks/useSocket';
 import { ToastContainer } from 'react-toastify';
@@ -14,6 +14,14 @@ import NotFound from './pages/NotFound';
 
 const App = () => {
   useSocket();
+  
+  useEffect(() => {
+    // Ping the backend to wake up both Node.js and Python AI services on Render
+    const BACKEND_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || '';
+    if (BACKEND_URL) {
+      fetch(`${BACKEND_URL}/`).catch(err => console.log('Wake-up ping failed:', err));
+    }
+  }, []);
   return (
     <div className='min-h-screen bg-gray-50'>
       <Header />
