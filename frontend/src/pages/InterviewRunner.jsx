@@ -268,8 +268,10 @@ function InterviewRunner() {
        setIsSpeaking(true);
        const fetchTTS = async () => {
            try {
-               const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || 'http://localhost:8000';
-               const res = await fetch(`${AI_SERVICE_URL}/tts`, {
+               const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || 'https://ai-interviewer-nx1f.onrender.com';
+               // Strip trailing slash if present to avoid //tts
+               const baseUrl = AI_SERVICE_URL.endsWith('/') ? AI_SERVICE_URL.slice(0, -1) : AI_SERVICE_URL;
+               const res = await fetch(`${baseUrl}/tts`, {
                    method: 'POST',
                    headers: { 'Content-Type': 'application/json' },
                    body: JSON.stringify({ text: currentQuestion.questionText })
