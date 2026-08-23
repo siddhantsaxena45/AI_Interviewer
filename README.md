@@ -1,26 +1,36 @@
-# AI-Powered Technical Interview Prepper (AI Proctor)
+<div align="center">
+  <img src="frontend/public/logo.svg" alt="Lumina AI Logo" width="120" />
+  <h1>Lumina AI - Next-Gen Technical Interviewer</h1>
+  <p>An advanced, AI-driven mock interview platform designed to help candidates prepare for technical interviews with real-time feedback, voice synthesis, and performance analytics.</p>
+</div>
 
-An advanced, AI-driven mock interview platform designed to help candidates prepare for technical interviews. The platform dynamically generates role-specific interview questions, supports both coding and conceptual questions, and provides real-time, comprehensive evaluation of the candidate's answers.
+---
 
-## 🚀 Features
+## 🌟 Overview
 
-- **Dynamic Question Generation**: Automatically generates interview questions tailored to the candidate's specific role (e.g., MERN Stack Developer) and experience level (e.g., Junior, Senior).
-- **Coding & Conceptual Challenges**: Supports a mix of hands-on coding challenges and conceptual oral questions.
+Lumina AI dynamically generates role-specific interview questions, supports both coding and conceptual questions, and provides real-time, comprehensive evaluation of the candidate's answers. It simulates a realistic interview environment by utilizing **Text-to-Speech (TTS)** for human-like voice interactions and **Speech-to-Text (STT)** via Google Gemini for seamless verbal communication.
+
+## 🚀 Key Features
+
+- **Dynamic Question Generation**: Automatically generates interview questions tailored to the candidate's specific role (e.g., *MERN Stack Developer*) and experience level (e.g., *Junior, Senior*).
+- **Coding & Conceptual Challenges**: Supports a mix of hands-on coding challenges via Monaco Editor and conceptual oral questions.
 - **Adaptive Follow-up Questions**: Dynamically generates follow-up questions based on the candidate's previous answers and code quality.
-- **Lightning-Fast AI (Gemini 2.5 Flash)**: Uses Google's Gemini 2.5 Flash model for incredibly fast, native speech-to-text audio transcription and intelligent question evaluations.
-- **Key Rotation**: Built-in API key rotation logic to handle high-traffic environments and prevent rate-limiting.
-- **Live Proctoring & Analytics**: Integrates TensorFlow.js (COCO-SSD) for candidate monitoring and Chart.js for visualizing performance metrics.
-- **Real-Time Communication**: Uses Socket.io for live syncing between the client and backend.
+- **Lightning-Fast AI (Gemini 2.5 Flash)**: Uses Google's Gemini 2.5 Flash model for incredibly fast, native audio evaluation and intelligent question generation.
+- **Human-like TTS Voices**: Integrated with `edge-tts` to stream highly realistic AI voices directly to the browser, eliminating the robotic feel of standard web speech APIs.
+- **Analytics Dashboard**: Comprehensive user profile dashboard powered by `chart.js` that tracks historical performance, skill breakdowns (Radar charts), and progress over time.
+- **Live Proctoring**: Integrates TensorFlow.js (COCO-SSD) for candidate monitoring and anti-cheat mechanisms.
+- **Real-Time Communication**: Uses Socket.io for live syncing between the client, Node.js backend, and Python microservice to provide an instantaneous, polling-free experience.
 
 ## 🛠️ Technology Stack
 
-### Frontend (Vercel Ready)
+### Frontend (Vite + React)
 - **Framework**: React 19 + Vite
 - **Styling**: Tailwind CSS + PostCSS
 - **State Management**: Redux Toolkit
-- **Code Editor**: Monaco Editor
-- **Machine Learning**: TensorFlow.js (COCO-SSD)
-- **Authentication**: Google OAuth (@react-oauth/google) + JWT
+- **Code Editor**: Monaco Editor (`@monaco-editor/react`)
+- **Machine Learning**: TensorFlow.js (COCO-SSD) for proctoring
+- **Charts**: Chart.js + react-chartjs-2
+- **Authentication**: Google OAuth + JWT
 
 ### Backend (Node.js API)
 - **Framework**: Node.js + Express
@@ -30,29 +40,35 @@ An advanced, AI-driven mock interview platform designed to help candidates prepa
 
 ### AI Service (Python Microservice)
 - **Framework**: FastAPI
-- **LLM & Speech-to-Text**: Google GenAI SDK (`gemini-2.5-flash`)
-- **Resilience**: Exponential Backoff Retry Mechanisms & Key Rotation
+- **LLM Engine**: Google GenAI SDK (`gemini-2.5-flash`)
+- **Voice Synthesis (TTS)**: `edge-tts` (Microsoft Edge Neural Voices)
+- **Audio Processing**: `pydub`, `python-multipart`
+- **Resilience**: Exponential Backoff Retry Mechanisms & API Key Rotation
 
-## 📁 Project Structure
+## 📂 Project Structure
 
-```
+```text
 .
 ├── frontend/             # React/Vite Frontend application
 ├── backend/              # Node.js/Express Main API server
-├── ai-service/           # Python/FastAPI Microservice for AI evaluations and STT
+└── ai-service/           # Python/FastAPI Microservice for AI evaluations and TTS
 ```
 
-## ⚙️ Local Development
+---
+
+## 💻 Local Development Setup
 
 ### Prerequisites
 - [Node.js](https://nodejs.org/) (v18 or higher)
 - [Python](https://www.python.org/) (3.9 or higher)
+- [FFmpeg](https://ffmpeg.org/) (Required for `pydub` audio processing)
 - Google Gemini API Keys
 
 ### 1. Setup AI Service (Python)
 ```bash
 cd ai-service
 python -m venv venv
+
 # On Windows:
 .\venv\Scripts\activate
 # On Mac/Linux:
@@ -66,7 +82,10 @@ AI_SERVICE_PORT=8000
 GOOGLE_API_KEY1=your_api_key_here
 GOOGLE_API_KEY2=your_api_key_here
 ```
-Run it: `python main.py`
+Run the FastAPI server:
+```bash
+python main.py
+```
 
 ### 2. Setup Backend (Node.js)
 ```bash
@@ -81,7 +100,10 @@ FRONTEND_URL=http://localhost:5173
 JWT_SECRET=supersecretjwtkey
 GOOGLE_CLIENT_ID=your_google_client_id
 ```
-Run it: `npm run dev`
+Start the development server:
+```bash
+npm run dev
+```
 
 ### 3. Setup Frontend (React)
 ```bash
@@ -93,7 +115,10 @@ Create a `.env` in `frontend/`:
 VITE_API_URL=http://localhost:5000/api
 VITE_GOOGLE_CLIENT_ID=your_google_client_id
 ```
-Run it: `npm run dev`
+Start the Vite dev server:
+```bash
+npm run dev
+```
 
 ---
 
@@ -108,7 +133,7 @@ This repository is optimized for free-tier deployments on **Vercel** and **Rende
 
 ### 2. AI Service (Render)
 - Deploy `ai-service` as a **Web Service** on [Render](https://render.com).
-- **Build Command**: `pip install -r requirements.txt`
+- **Build Command**: `pip install -r requirements.txt && apt-get update && apt-get install -y ffmpeg` *(Note: ffmpeg must be installed on the deployment environment for audio parsing to work).*
 - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 - Set your `GOOGLE_API_KEY`s in the Environment Variables.
 
@@ -122,5 +147,5 @@ This repository is optimized for free-tier deployments on **Vercel** and **Rende
 - Deploy `frontend` on [Vercel](https://vercel.com) (Vite preset will be auto-detected).
 - Set `VITE_API_URL` to your deployed Backend URL (from Step 3).
 
-## 📝 License
+## 📄 License
 ISC License
