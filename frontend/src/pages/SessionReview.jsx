@@ -87,7 +87,7 @@ function SessionReview() {
                        <span className="w-3 h-3 bg-teal-500 rounded-full"></span>
                        <span className="text-teal-600 font-black uppercase tracking-[0.3em] text-[10px]">Session Analysis Report</span>
                     </div>
-                    <h1 className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none">
+                    <h1 className="text-3xl sm:text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none break-words overflow-wrap-anywhere">
                         {role} <span className="text-slate-300 font-light block sm:inline">({level})</span>
                     </h1>
                 </div>
@@ -115,7 +115,7 @@ function SessionReview() {
             </div>
 
             {/* SELECTION PREDICTION BAR */}
-            <div className="bg-white p-10 rounded-[3.5rem] shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-10">
+            <div className="bg-white p-5 sm:p-10 rounded-[3.5rem] shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-10">
                 <div className="flex-1">
                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Market Probability Assessment</h3>
                    <div className="flex items-center gap-4">
@@ -129,7 +129,7 @@ function SessionReview() {
             </div>
 
             {/* PERFORMANCE CHART */}
-            <div className="bg-white p-10 rounded-[3.5rem] shadow-sm border border-slate-100">
+            <div className="bg-white p-5 sm:p-10 rounded-3xl sm:rounded-[3.5rem] shadow-sm border border-slate-100">
                 <h3 className="text-xs font-black text-slate-400 mb-8 uppercase tracking-[0.3em]">Adaptive Question Matrix</h3>
                 <div className="h-64">
                     <Bar
