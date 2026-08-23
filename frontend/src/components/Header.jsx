@@ -59,21 +59,21 @@ const Header = () => {
       
        {isMenuOpen && (
         <div className="md:hidden bg-slate-900 border-t border-slate-800 animate-in slide-in-from-top-2 duration-300">
-          <div className="px-6 py-8 space-y-4">
+          <div className="px-6 py-4 space-y-2">
             {user ? (
               <>
-                <div className="flex items-center space-x-3 mb-6 p-4 bg-slate-800 rounded-2xl border border-slate-700">
-                   <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                   <span className="text-lg font-black uppercase tracking-tighter text-slate-200">{user.name}</span>
+                <div className="flex items-center space-x-3 mb-4 p-3 bg-slate-800 rounded-xl border border-slate-700">
+                   <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                   <span className="text-base font-black uppercase tracking-tighter text-slate-200">{user.name}</span>
                 </div>
-                <Link to="/" onClick={() => setIsMenuOpen(false)} className={`block py-4 text-xl font-black uppercase tracking-widest border-b border-slate-800 ${isActive('/') ? 'text-teal-400' : 'text-slate-400'}`}>Dashboard</Link>
-                <Link to="/profile" onClick={() => setIsMenuOpen(false)} className={`block py-4 text-xl font-black uppercase tracking-widest border-b border-slate-800 ${isActive('/profile') ? 'text-teal-400' : 'text-slate-400'}`}>Profile</Link>
-                <button onClick={onLogout} className="w-full mt-6 bg-rose-600 hover:bg-rose-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Logout</button>
+                <Link to="/" onClick={() => setIsMenuOpen(false)} className={`block py-3 text-sm font-black uppercase tracking-widest border-b border-slate-800 ${isActive('/') ? 'text-teal-400' : 'text-slate-400'}`}>Dashboard</Link>
+                <Link to="/profile" onClick={() => setIsMenuOpen(false)} className={`block py-3 text-sm font-black uppercase tracking-widest border-b border-slate-800 ${isActive('/profile') ? 'text-teal-400' : 'text-slate-400'}`}>Profile</Link>
+                <button onClick={onLogout} className="w-full mt-4 bg-rose-600 hover:bg-rose-700 text-white py-3 rounded-xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">Logout</button>
               </>
             ) : (
               <>
-                <Link to="/login" onClick={() => setIsMenuOpen(false)} className={`block py-4 text-xl font-black uppercase tracking-widest border-b border-slate-800 ${isActive('/login') ? 'text-teal-400' : 'text-slate-400'}`}>Login</Link>
-                <Link to="/register" onClick={() => setIsMenuOpen(false)} className={`block py-4 text-xl font-black uppercase tracking-widest ${isActive('/register') ? 'text-teal-400' : 'text-slate-400'}`}>Register</Link>
+                <Link to="/login" onClick={() => setIsMenuOpen(false)} className={`block py-3 text-sm font-black uppercase tracking-widest border-b border-slate-800 ${isActive('/login') ? 'text-teal-400' : 'text-slate-400'}`}>Login</Link>
+                <Link to="/register" onClick={() => setIsMenuOpen(false)} className={`block py-3 text-sm font-black uppercase tracking-widest ${isActive('/register') ? 'text-teal-400' : 'text-slate-400'}`}>Register</Link>
               </>
             )}
           </div>
