@@ -1,7 +1,7 @@
 <div align="center">
   <img src="frontend/public/logo.svg" alt="Lumina AI Logo" width="120" />
-  <h1>Lumina AI - Next-Gen Technical Interviewer</h1>
-  <p>An advanced, AI-driven mock interview platform designed to help candidates prepare for technical interviews with real-time feedback, voice synthesis, and performance analytics.</p>
+  <h1>Lumina AI - Next-Gen Technical & Behavioral Interviewer</h1>
+  <p>An advanced, AI-driven mock interview platform designed to help candidates prepare for both technical and behavioral interviews with real-time feedback, voice synthesis, and genuine AI performance analytics.</p>
 </div>
 
 ---
@@ -13,12 +13,12 @@ Lumina AI dynamically generates role-specific interview questions, supports both
 ## 🚀 Key Features
 
 - **Dynamic Question Generation**: Automatically generates interview questions tailored to the candidate's specific role (e.g., *MERN Stack Developer*) and experience level (e.g., *Junior, Senior*).
+- **HR / Behavioral Mode (STAR Method)**: A specialized mode where the AI acts as a hiring manager. It asks behavioral prompts (e.g., *"Tell me about a time..."*) and strictly evaluates the candidate's response using the **Situation, Task, Action, Result (STAR)** framework.
 - **Coding & Conceptual Challenges**: Supports a mix of hands-on coding challenges via Monaco Editor and conceptual oral questions.
-- **Adaptive Follow-up Questions**: Dynamically generates follow-up questions based on the candidate's previous answers and code quality.
-- **Lightning-Fast AI (Gemini 2.5 Flash)**: Uses Google's Gemini 2.5 Flash model for incredibly fast, native audio evaluation and intelligent question generation.
+- **Lightning-Fast AI (Gemini 2.5 Flash)**: Uses Google's Gemini 2.5 Flash model for incredibly fast, native audio evaluation, coding evaluation, and intelligent question generation.
 - **Human-like TTS Voices**: Integrated with `edge-tts` to stream highly realistic AI voices directly to the browser, eliminating the robotic feel of standard web speech APIs.
-- **Analytics Dashboard**: Comprehensive user profile dashboard powered by `chart.js` that tracks historical performance, skill breakdowns (Radar charts), and progress over time.
 - **Live Proctoring**: Integrates TensorFlow.js (COCO-SSD) for candidate monitoring and anti-cheat mechanisms.
+- **Real AI Analytics Dashboard**: The user profile dashboard doesn't just show charts—it bundles your historical interview data and asks Gemini to synthesize a **completely unique, personalized performance summary** and actionable recommendations on-the-fly.
 - **Real-Time Communication**: Uses Socket.io for live syncing between the client, Node.js backend, and Python microservice to provide an instantaneous, polling-free experience.
 
 ## 🛠️ Technology Stack
@@ -51,7 +51,7 @@ Lumina AI dynamically generates role-specific interview questions, supports both
 .
 ├── frontend/             # React/Vite Frontend application
 ├── backend/              # Node.js/Express Main API server
-└── ai-service/           # Python/FastAPI Microservice for AI evaluations and TTS
+└── ai-service/           # Python/FastAPI Microservice for AI evaluations, analysis, and TTS
 ```
 
 ---
