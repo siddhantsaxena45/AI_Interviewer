@@ -28,7 +28,7 @@ const Header = () => {
             </svg>
 
           </div>
-          <span className=" text-lg sm:text-xl font-black tracking-tighter uppercase text-white group-hover:text-teal-400 transition-colors">AI <span className="text-teal-500">INT</span><span className="hidden sm:inline">erviewer</span></span>
+          <span className="text-base sm:text-xl font-black tracking-tighter uppercase text-white group-hover:text-teal-400 transition-colors">AI <span className="text-teal-500">INTERVIEWER</span></span>
         </Link>
         <nav className="hidden md:flex items-center space-x-6">
           {user ? (<>
@@ -46,7 +46,7 @@ const Header = () => {
           </div>)}
         </nav>
 
-        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-teal-400 transition-colors">
+        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-teal-400 active:scale-95 transition-all shadow-sm">
            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {isMenuOpen ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />

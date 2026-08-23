@@ -78,7 +78,7 @@ function SessionReview() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-12 space-y-12 animate-in fade-in duration-1000 bg-slate-50/30 font-sans">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8 sm:space-y-12 animate-in fade-in duration-1000 bg-slate-50/30 font-sans">
 
             {/* HEADER & TOP STATS */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
@@ -155,11 +155,11 @@ function SessionReview() {
                 
                 <div className="space-y-10">
                     {questions.map((q, index) => (
-                        <div key={index} className="bg-white rounded-[3.5rem] border border-slate-100 shadow-sm overflow-hidden group hover:shadow-2xl transition-all duration-1000">
-                            <div className="p-10 space-y-8">
+                        <div key={index} className="bg-white rounded-3xl sm:rounded-[3.5rem] border border-slate-100 shadow-sm overflow-hidden group hover:shadow-2xl transition-all duration-1000">
+                            <div className="p-4 sm:p-10 space-y-6 sm:space-y-8">
                                 {/* Header */}
                                 <div className="flex flex-col lg:flex-row justify-between items-start gap-6 border-b border-slate-50 pb-8">
-                                    <h4 className="text-xl font-bold text-slate-800 leading-snug flex-1">
+                                    <h4 className="text-base sm:text-xl font-bold text-slate-800 leading-snug flex-1">
                                         <span className="text-teal-500 font-black italic mr-3">Q{index + 1}.</span> {q.questionText}
                                     </h4>
                                     <div className="flex gap-2">
@@ -172,7 +172,7 @@ function SessionReview() {
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                                     <div className="space-y-3">
                                         <label className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] block ml-2 text-center">Your Response</label>
-                                        <div className="bg-slate-50 rounded-[2.5rem] p-8 border border-slate-100 min-h-[150px] space-y-4">
+                                        <div className="bg-slate-50 rounded-3xl sm:rounded-[2.5rem] p-5 sm:p-8 border border-slate-100 min-h-[150px] space-y-4">
                                             {q.userSubmittedCode && (
                                                 <pre className="text-[11px] font-mono text-slate-700 bg-white p-4 rounded-xl border border-slate-200 overflow-x-auto whitespace-pre-wrap">{q.userSubmittedCode}</pre>
                                             )}
@@ -182,7 +182,7 @@ function SessionReview() {
                                     </div>
                                     <div className="space-y-3">
                                         <label className="text-[10px] font-black text-teal-600 uppercase tracking-[0.3em] block ml-2 text-center">AI Ideal Answer</label>
-                                        <div className="bg-slate-900 text-slate-300 rounded-[2.5rem] p-8 min-h-[150px] shadow-inner text-sm leading-relaxed overflow-x-auto">
+                                        <div className="bg-slate-900 text-slate-300 rounded-3xl sm:rounded-[2.5rem] p-5 sm:p-8 min-h-[150px] shadow-inner text-xs sm:text-sm leading-relaxed overflow-x-auto prose-sm prose-slate prose-invert">
                                             <ReactMarkdown 
                                                 remarkPlugins={[remarkGfm]}
                                                 components={{
@@ -204,10 +204,10 @@ function SessionReview() {
                                                         </code>
                                                         )
                                                     },
-                                                    h1: ({node, ...props}) => <h1 className="text-xl font-bold text-white mb-4 mt-6 border-b border-slate-700 pb-2" {...props} />,
-                                                    h2: ({node, ...props}) => <h2 className="text-lg font-bold text-teal-400 mb-3 mt-5" {...props} />,
-                                                    h3: ({node, ...props}) => <h3 className="text-base font-bold text-slate-200 mb-2 mt-4" {...props} />,
-                                                    p: ({node, ...props}) => <p className="mb-4 last:mb-0" {...props} />,
+                                                    h1: ({node, ...props}) => <h1 className="text-lg sm:text-xl font-bold text-white mb-4 mt-6 border-b border-slate-700 pb-2" {...props} />,
+                                                    h2: ({node, ...props}) => <h2 className="text-base sm:text-lg font-bold text-teal-400 mb-3 mt-5" {...props} />,
+                                                    h3: ({node, ...props}) => <h3 className="text-sm sm:text-base font-bold text-slate-200 mb-2 mt-4" {...props} />,
+                                                    p: ({node, ...props}) => <p className="mb-4 last:mb-0 text-xs sm:text-sm" {...props} />,
                                                     ul: ({node, ...props}) => <ul className="list-disc ml-6 mb-4 space-y-1 text-slate-300" {...props} />,
                                                     ol: ({node, ...props}) => <ol className="list-decimal ml-6 mb-4 space-y-1 text-slate-300" {...props} />,
                                                     li: ({node, ...props}) => <li className="pl-1" {...props} />
@@ -234,8 +234,8 @@ function SessionReview() {
                 </div>
             </div>
 
-            {/* INTEGRITY STATUS BOX (Redundant Dashboard button removed) */}
-            <div className={`p-10 rounded-[3.5rem] border ${violations > 0 ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100'} text-center`}>
+            {/* INTEGRITY STATUS BOX */}
+            <div className={`p-6 sm:p-10 rounded-3xl sm:rounded-[3.5rem] border ${violations > 0 ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100'} text-center`}>
                 <h4 className={`text-2xl font-black uppercase tracking-tighter mb-4 ${violations > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
                     {violations > 0 ? 'Security Incident Logged' : 'Integrity Verified'}
                 </h4>
@@ -245,10 +245,10 @@ function SessionReview() {
                       : 'Zero behavioral anomalies detected. Candidate maintained full compliance with professional proctoring standards during the entire session.'
                     }
                 </p>
-                <div className="mt-8 flex justify-center gap-6">
-                    <div className="px-6 py-2 bg-white rounded-full border border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tab Switches: Logged</div>
-                    <div className="px-6 py-2 bg-white rounded-full border border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-widest">Phone Detection: Active</div>
-                    <div className="px-6 py-2 bg-white rounded-full border border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-widest">Face Loss: Monitored</div>
+                <div className="mt-6 sm:mt-8 flex flex-wrap justify-center gap-4 sm:gap-6">
+                    <div className="px-4 sm:px-6 py-2 bg-white rounded-full border border-slate-200 text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Tab Switches: Logged</div>
+                    <div className="px-4 sm:px-6 py-2 bg-white rounded-full border border-slate-200 text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Phone Detection: Active</div>
+                    <div className="px-4 sm:px-6 py-2 bg-white rounded-full border border-slate-200 text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Face Loss: Monitored</div>
                 </div>
             </div>
 

@@ -27,9 +27,9 @@ const App = () => {
     fetch(AI_SERVICE_URL).catch(err => console.log('AI Service wake-up ping failed:', err));
   }, []);
   return (
-    <div className='min-h-screen bg-gray-50'>
+    <div className='min-h-screen bg-slate-50 flex flex-col'>
       <Header />
-      <main className='container mx-auto p-4'>
+      <main className='flex-grow flex flex-col'>
         <Routes>
           <Route path='/login' element={<Login />} />
           <Route path='/register' element={<Register />} />
