@@ -31,7 +31,7 @@ const Header = () => {
         </Link>
         <nav className="hidden md:flex items-center space-x-6">
           {user ? (<>
-            <Link to="/" className={`text-sm font-bold uppercase tracking-widest transition-all ${isActive('/') ? 'text-teal-400 border-b-2 border-teal-500' : 'text-slate-400 hover:text-white border-b-2 border-transparent'}`}>Dashboard</Link>
+            <Link to="/" className={`text-sm font-bold uppercase tracking-widest transition-all ${isActive('/') ? 'text-teal-400 border-b-2 border-teal-500' : 'text-slate-400 hover:text-white border-b-2 border-transparent'}`}>Home</Link>
             <Link to="/profile" className={`text-sm font-bold uppercase tracking-widest transition-all ${isActive('/profile') ? 'text-teal-400 border-b-2 border-teal-500' : 'text-slate-400 hover:text-white border-b-2 border-transparent'}`}>Profile</Link>
             <div className="flex items-center space-x-2 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
