@@ -85,6 +85,22 @@ const Profile = () => {
 
   useEffect(() => {
     if (completedSessions.length > 0 && !aiAnalysis && !isAnalyzing) {
+      const cacheKey = `ai_analysis_${user?._id}`;
+      const cachedData = localStorage.getItem(cacheKey);
+      
+      if (cachedData) {
+          try {
+              const parsedCache = JSON.parse(cachedData);
+              // Only use cache if the user hasn't completed new interviews
+              if (parsedCache.sessionCount === completedSessions.length) {
+                  setAiAnalysis(parsedCache.data);
+                  return;
+              }
+          } catch (e) {
+              console.error("Failed to parse cache", e);
+          }
+      }
+
       const fetchAnalysis = async () => {
         setIsAnalyzing(true);
         try {
@@ -111,6 +127,12 @@ const Profile = () => {
             });
             const data = await res.json();
             setAiAnalysis(data);
+            
+            // Save to cache
+            localStorage.setItem(cacheKey, JSON.stringify({
+                sessionCount: completedSessions.length,
+                data: data
+            }));
         } catch (error) {
             console.error(error);
         } finally {
@@ -119,7 +141,7 @@ const Profile = () => {
       };
       fetchAnalysis();
     }
-  }, [completedSessions, aiAnalysis, isAnalyzing, user?.token]);
+  }, [completedSessions, aiAnalysis, isAnalyzing, user?._id, user?.token]);
 
   useEffect(() => {
     if (user) {
@@ -305,7 +327,9 @@ const Profile = () => {
                                     <Radar data={radarData} options={radarOptions} />
                                 </div>
                             </div>
-                                             {/* Weakness Analysis */}
+                        </div>
+
+                        {/* Weakness Analysis */}
                         <div className="bg-slate-900 rounded-2xl p-6 sm:p-8 text-white relative overflow-hidden mt-6">
                             <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/20 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2"></div>
                             <h3 className="text-sm font-black uppercase tracking-widest text-teal-400 mb-4 flex items-center space-x-2">
@@ -332,7 +356,7 @@ const Profile = () => {
                                     <p className="text-slate-400 italic">Complete more interviews to generate a real AI performance analysis.</p>
                                 )}
                             </div>
-                        </div>           </div>
+                        </div>
                     </>
                 )}
             </div>
