@@ -24,11 +24,10 @@ const Header = () => {
         <Link to="/" className="flex items-center space-x-2 group shrink-0">
           <div className="bg-teal-500 p-1.5 rounded-lg group-hover:rotate-12 transition-transform duration-300">
             <svg className="w-5 h-5 sm:w-6 sm:h-6 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7z" fill="rgba(20,184,166,0.2)"/>
             </svg>
-
           </div>
-          <span className="text-base sm:text-xl font-black tracking-tighter uppercase text-white group-hover:text-teal-400 transition-colors">AI <span className="text-teal-500">INTERVIEWER</span></span>
+          <span className="text-base sm:text-xl font-black tracking-tighter uppercase text-white group-hover:text-teal-400 transition-colors">LUMINA <span className="text-teal-500">AI</span></span>
         </Link>
         <nav className="hidden md:flex items-center space-x-6">
           {user ? (<>
