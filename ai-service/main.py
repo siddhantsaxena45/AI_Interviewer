@@ -110,6 +110,19 @@ class EvaluationResponse(BaseModel):
     aiFeedback: str
     idealAnswer: str
 
+class SessionSummary(BaseModel):
+    role: str
+    technicalScore: int
+    confidenceScore: int
+    aiFeedback: str
+
+class ProfileAnalysisRequest(BaseModel):
+    history: list[SessionSummary]
+
+class ProfileAnalysisResponse(BaseModel):
+    summary: str
+    recommendation: str
+
 @app.get("/")
 async def root():
     return {"message": "Hello from AI Interviewer Microservice !", "model": GEMINI_MODEL_NAME}
@@ -118,7 +131,14 @@ async def root():
 @app.post("/generate-questions", response_model=QuestionResponse)
 async def generate_questions(request: QuestionResquest):
     try:
-        if request.interview_type == "coding-mix":
+        if request.interview_type == "behavioral":
+            instruction = (
+                "All questions MUST be HR / Behavioral interview questions. "
+                "Act as a hiring manager. Ask questions that require the candidate to use the STAR framework "
+                "(Situation, Task, Action, Result). Examples: 'Tell me about a time when...', 'Describe a situation where...'. "
+                "Do NOT generate any technical coding or implementation challenges."
+            )
+        elif request.interview_type == "coding-mix":
             coding_count = int(request.count * 0.2)
             oral_oral = int(request.count) - int(coding_count)
             instruction = (
@@ -269,6 +289,7 @@ async def evaluate(
     level: str = Form(...),
     question: str = Form(...),
     question_type: str = Form("oral"),
+    interview_type: str = Form("coding-mix"),
     user_answer: str = Form(""),
     user_code: str = Form(""),
     audioFile: UploadFile = File(None)
@@ -288,7 +309,13 @@ async def evaluate(
                 uploaded_file = await client.aio.files.upload(file=temp_audio_path)
                 contents_list.append(uploaded_file)
         
-        if question_type == "oral":
+        if interview_type == "behavioral":
+            assessment_instruction = (
+                "This is a Behavioral/HR interview question. Evaluate the candidate's answer STRICTLY using the STAR framework "
+                "(Situation, Task, Action, Result). Did they provide a concrete example? Penalize vague answers. "
+                "CRITICAL: If the transcript/audio is empty, nonsense or irrelevant, SCORE 0."
+            )
+        elif question_type == "oral":
             assessment_instruction = (
                 "This is a conceptual oral question. Focus on the candidate's explanation. "
                 "CRITICAL: If the transcript/audio is empty, nonsense or irrelevant, SCORE 0."
@@ -301,13 +328,13 @@ async def evaluate(
             )
         
         system_instruction = (
-            "You are a strict technical interviewer with an advanced multi-modal audio model. "
+            "You are a strict technical/HR interviewer with an advanced multi-modal audio model. "
             "Your tasks:\n"
             "1. Transcribe the audio exactly if provided.\n"
-            "2. Evaluate the technical answer based on transcript and code.\n"
+            "2. Evaluate the answer based on transcript and code (if applicable).\n"
             "3. Evaluate the confidenceScore (0-100) strictly based on vocal delivery in the audio: pacing, tone, hesitations (umm, ahh). If no audio, use the text transcript.\n"
             "RULE 1: If the answer is gibberish, irrelevant, or missing, return 'technicalScore':0 and 'confidenceScore':0.\n"
-            "RULE 2: For 'idealAnswer', provide a clean Markdown string. Do NOT return a nested JSON object.\n"
+            "RULE 2: For 'idealAnswer', it is STRICTLY FORBIDDEN to output more than 2 short sentences. Provide a clean, extremely brief summary. No lists. No bullet points. Do NOT return a nested JSON object.\n"
             f"Context: {assessment_instruction}"
         )
         
@@ -387,6 +414,50 @@ async def generate_tts(request: TTSRequest):
         print(f"TTS error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/analyze-profile", response_model=ProfileAnalysisResponse)
+async def analyze_profile(request: ProfileAnalysisRequest):
+    if not request.history:
+        return ProfileAnalysisResponse(
+            summary="You haven't completed any interviews yet. Complete your first interview to generate an AI performance analysis.",
+            recommendation="Start an interview from your Dashboard to get personalized feedback on your technical and communication skills."
+        )
+
+    system_instruction = (
+        "You are an expert technical recruiter and career coach analyzing a candidate's past interview performance. "
+        "Review the provided array of past interview scores and feedback. "
+        "Your task:\n"
+        "1. Write a 1-sentence 'summary' capturing their overall trajectory and primary strengths or recurring weaknesses.\n"
+        "2. Write a 1-sentence 'recommendation' offering actionable, specific advice for their next interview.\n"
+        "CRITICAL: Keep responses extremely concise. Do NOT use bullet points. Do NOT be overly generic."
+    )
+    
+    prompt = f"Candidate History:\n{json.dumps([h.model_dump() for h in request.history], indent=2)}"
+    
+    last_exception = None
+    for attempt in range(len(gemini_manager.clients)):
+        try:
+            client = gemini_manager.get_client()
+            response = await client.aio.models.generate_content(
+                model=GEMINI_MODEL_NAME,
+                contents=[prompt],
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    response_mime_type="application/json",
+                    response_schema=ProfileAnalysisResponse,
+                    temperature=0.3
+                )
+            )
+            
+            result_json = response.text
+            parsed_data = json.loads(result_json)
+            return ProfileAnalysisResponse(**parsed_data)
+            
+        except Exception as e:
+            gemini_manager.rotate_key()
+            last_exception = e
+            print(f"Gemini API Error in /analyze-profile (attempt {attempt + 1}): {e}")
+
+    raise HTTPException(status_code=500, detail="AI service unavailable after multiple retries.")
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=AI_SERVICE_PORT)
-

@@ -61,7 +61,7 @@ const sessionSchema= new mongoose.Schema({
     },
     interviewType:{
         type:String,
-        enum:["oral-only","coding-mix"],
+        enum:["oral-only","coding-mix","behavioral"],
         required:true
     },
     duration: {

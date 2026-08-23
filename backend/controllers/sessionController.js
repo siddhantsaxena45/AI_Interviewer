@@ -186,6 +186,35 @@ const deleteSession = asyncHandler(async (req, res) => {
     res.status(200).json({ id: req.params.id });
 });
 
+// @desc    Analyze user profile
+// @route   POST /api/sessions/analyze-profile
+// @access  Private
+const analyzeProfileAsync = asyncHandler(async (req, res) => {
+    const { history } = req.body;
+    
+    if (!history || !Array.isArray(history)) {
+        res.status(400);
+        throw new Error('Invalid history array');
+    }
+
+    try {
+        const response = await fetchWithRetry(`${AI_SERVICE_URL}/analyze-profile`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ history })
+        });
+        
+        const data = await response.json();
+        res.status(200).json(data);
+    } catch (error) {
+        console.error("Error analyzing profile:", error);
+        res.status(500);
+        throw new Error("Failed to analyze profile with AI");
+    }
+});
+
 const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFilePath = null, code = null) => {
     const processingStart = Date.now(); // TRACK START OF AI PROCESSING
     // Initialize transcription as an empty string instead of null to avoid "null" text in AI prompts
@@ -214,6 +243,7 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
         formData.append('level', session.level);
         formData.append('question', question.questionText);
         formData.append('question_type', question.questionType);
+        formData.append('interview_type', session.interviewType);
         formData.append('user_answer', transcription || ""); // Fallback if needed
         formData.append('user_code', code || "");
         
@@ -483,7 +513,8 @@ export {
     endSession,
     calculateOverallScore,
     deleteSession,
-    startSession
+    startSession,
+    analyzeProfileAsync
 };
 
 

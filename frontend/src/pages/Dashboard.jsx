@@ -27,7 +27,7 @@ const ROLES = [
   "Product Manager"
 ];
 const LEVELS = ["Junior", "Mid-Level", "Senior"];
-const TYPES = [{ label: 'Oral only', value: 'oral-only' }, { label: 'Coding Mix', value: 'coding-mix' }];
+const TYPES = [{ label: 'Oral only', value: 'oral-only' }, { label: 'Coding Mix', value: 'coding-mix' }, { label: 'HR / Behavioral (STAR)', value: 'behavioral' }];
 const DURATIONS = [10, 15, 30, 45, 60];
 
 const Dashboard = () => {
