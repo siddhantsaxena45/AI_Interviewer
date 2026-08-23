@@ -1,9 +1,11 @@
-import uvicorn
+﻿import uvicorn
 import os
 import io
 import json
 import tempfile
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
+import edge_tts
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -320,5 +322,26 @@ async def evaluate(request: EvaluationRequest):
         print(f"Failed to generate response: {e}")
         raise HTTPException(status_code=500, detail=str(e))
         
+
+class TTSRequest(BaseModel):
+    text: str
+
+@app.post("/tts")
+async def generate_tts(request: TTSRequest):
+    try:
+        voice = "en-US-AriaNeural"
+        communicate = edge_tts.Communicate(request.text, voice)
+        
+        async def generate():
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    yield chunk["data"]
+                    
+        return StreamingResponse(generate(), media_type="audio/mpeg")
+    except Exception as e:
+        print(f"TTS error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=AI_SERVICE_PORT)
+
