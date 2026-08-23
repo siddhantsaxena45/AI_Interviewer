@@ -323,7 +323,7 @@ async def evaluate(
         contents_list.append(user_prompt)
         
         response = await generate_with_retry(
-            client_manager=gemini_manager,
+            client=client,
             model=GEMINI_MODEL_NAME,
             contents=contents_list,
             config=types.GenerateContentConfig(

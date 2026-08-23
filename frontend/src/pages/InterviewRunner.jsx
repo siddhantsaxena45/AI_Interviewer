@@ -103,6 +103,10 @@ function InterviewRunner() {
        socketRef.current.on('sessionUpdate', (data) => {
          if (data.sessionId === sessionId) {
             dispatch(socketUpdateSession(data));
+            if (data.status === 'EVALUATION_FAILED') {
+                toast.error(data.message || "Evaluation failed. Please try submitting again.");
+                setSubmittedLocal(p => ({ ...p, [currentQuestionIndex]: false }));
+            }
          }
        });
     }
