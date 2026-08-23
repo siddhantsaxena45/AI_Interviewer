@@ -313,18 +313,21 @@ async def evaluate(
             assessment_instruction = (
                 "This is a Behavioral/HR interview question. Evaluate the candidate's answer STRICTLY using the STAR framework "
                 "(Situation, Task, Action, Result). Did they provide a concrete example? Penalize vague answers. "
-                "CRITICAL: If the transcript/audio is empty, nonsense or irrelevant, SCORE 0."
+                "CRITICAL: If the transcript/audio is empty, nonsense or irrelevant, SCORE 0.\n"
+                "RULE 2: For 'idealAnswer', it is STRICTLY FORBIDDEN to output more than 2 short sentences. Provide a clean, extremely brief summary. No lists. No bullet points. Do NOT return a nested JSON object."
             )
         elif question_type == "oral":
             assessment_instruction = (
                 "This is a conceptual oral question. Focus on the candidate's explanation. "
-                "CRITICAL: If the transcript/audio is empty, nonsense or irrelevant, SCORE 0."
+                "CRITICAL: If the transcript/audio is empty, nonsense or irrelevant, SCORE 0.\n"
+                "RULE 2: For 'idealAnswer', it is STRICTLY FORBIDDEN to output more than 2 short sentences. Provide a clean, extremely brief summary. No lists. No bullet points. Do NOT return a nested JSON object."
             )
         else:
             assessment_instruction = (
                 "This is a coding challenge question. Evaluate the code logic and efficiency. "
                 "Use the verbal explanation for insight into their thought process. "
-                "CRITICAL: If the code is 'undefined', empty, just random comments, or random characters, SCORE 0."
+                "CRITICAL: If the code is 'undefined', empty, just random comments, or random characters, SCORE 0.\n"
+                "RULE 2: For 'idealAnswer', you MUST provide the correct optimal code solution in a code block. Keep any text explanation to an absolute minimum (1 sentence max). Do NOT return a nested JSON object."
             )
         
         system_instruction = (
@@ -334,7 +337,6 @@ async def evaluate(
             "2. Evaluate the answer based on transcript and code (if applicable).\n"
             "3. Evaluate the confidenceScore (0-100) strictly based on vocal delivery in the audio: pacing, tone, hesitations (umm, ahh). If no audio, use the text transcript.\n"
             "RULE 1: If the answer is gibberish, irrelevant, or missing, return 'technicalScore':0 and 'confidenceScore':0.\n"
-            "RULE 2: For 'idealAnswer', it is STRICTLY FORBIDDEN to output more than 2 short sentences. Provide a clean, extremely brief summary. No lists. No bullet points. Do NOT return a nested JSON object.\n"
             f"Context: {assessment_instruction}"
         )
         
