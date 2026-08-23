@@ -59,6 +59,9 @@ const Profile = () => {
 
   const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' or 'settings'
   
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -66,15 +69,50 @@ const Profile = () => {
   });
 
   useEffect(() => {
+    if (isSuccess && activeTab === 'settings') {
+      toast.success('Profile updated!')
+    }
+  }, [user, isError, message, isSuccess, dispatch, activeTab])
+
+  useEffect(() => {
     dispatch(getSessions());
   }, [dispatch]);
 
+  const completedSessions = useMemo(() => {
+      if (!sessions) return [];
+      return [...sessions].filter(s => s.status === 'completed' && s.overallScore > 0).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  }, [sessions]);
+
   useEffect(() => {
-    if (!isError && !isSuccess) return
-    if (isError) toast.error(message)
-    if (isSuccess) toast.success('Profile Updated Successfully')
-    dispatch(reset())
-  }, [isError, isSuccess, message, dispatch])
+    if (completedSessions.length > 0 && !aiAnalysis && !isAnalyzing) {
+      const fetchAnalysis = async () => {
+        setIsAnalyzing(true);
+        try {
+            const history = completedSessions.slice(0, 5).map(s => ({
+                role: s.role,
+                technicalScore: s.technicalScore,
+                confidenceScore: s.confidenceScore,
+                aiFeedback: s.aiFeedback || ""
+            }));
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/sessions/analyze-profile`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${user.token}`
+                },
+                body: JSON.stringify({ history })
+            });
+            const data = await res.json();
+            setAiAnalysis(data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsAnalyzing(false);
+        }
+      };
+      fetchAnalysis();
+    }
+  }, [completedSessions, aiAnalysis, isAnalyzing, user?.token]);
 
   useEffect(() => {
     if (user) {
@@ -265,35 +303,34 @@ const Profile = () => {
                                     <Radar data={radarData} options={radarOptions} />
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Weakness Analysis */}
+                                             {/* Weakness Analysis */}
                         <div className="bg-slate-900 rounded-2xl p-6 sm:p-8 text-white relative overflow-hidden mt-6">
                             <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/20 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2"></div>
-                            <h3 className="text-sm font-black uppercase tracking-widest text-teal-400 mb-4">AI Performance Analysis</h3>
+                            <h3 className="text-sm font-black uppercase tracking-widest text-teal-400 mb-4 flex items-center space-x-2">
+                                <span>AI Performance Analysis</span>
+                                {isAnalyzing && <span className="flex space-x-1"><span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce"></span><span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></span><span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></span></span>}
+                            </h3>
                             
                             <div className="space-y-4 relative z-10">
-                                <p className="text-slate-300 leading-relaxed">
-                                    Based on your historical performance, you have a strong average in <span className="font-bold text-white">{avgTechnical > avgConfidence ? 'Technical Knowledge' : 'Communication & Delivery'}</span>. 
-                                </p>
-                                {avgScore < 70 && (
-                                    <div className="flex items-start space-x-3 bg-white/10 p-4 rounded-xl border border-white/10">
-                                        <div className="text-amber-400">💡</div>
-                                        <p className="text-sm text-slate-200">
-                                            <strong>Recommendation:</strong> Your scores indicate room for improvement. Try to structure your verbal answers more clearly and ensure your code handles edge cases.
+                                {isAnalyzing ? (
+                                    <p className="text-slate-400 italic">Synthesizing your historical data...</p>
+                                ) : aiAnalysis ? (
+                                    <>
+                                        <p className="text-slate-300 leading-relaxed">
+                                            {aiAnalysis.summary}
                                         </p>
-                                    </div>
-                                )}
-                                {avgScore >= 70 && (
-                                    <div className="flex items-start space-x-3 bg-white/10 p-4 rounded-xl border border-white/10">
-                                        <div className="text-teal-400">🔥</div>
-                                        <p className="text-sm text-slate-200">
-                                            <strong>Recommendation:</strong> You are performing exceptionally well! Consider bumping your difficulty to "Senior" to challenge yourself further.
-                                        </p>
-                                    </div>
+                                        <div className="flex items-start space-x-3 bg-white/10 p-4 rounded-xl border border-white/10">
+                                            <div className="text-amber-400">💡</div>
+                                            <p className="text-sm text-slate-200">
+                                                <strong>Recommendation:</strong> {aiAnalysis.recommendation}
+                                            </p>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <p className="text-slate-400 italic">Complete more interviews to generate a real AI performance analysis.</p>
                                 )}
                             </div>
-                        </div>
+                        </div>           </div>
                     </>
                 )}
             </div>

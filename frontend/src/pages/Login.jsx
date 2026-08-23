@@ -73,7 +73,7 @@ const Login = () => {
     <div className='flex justify-center items-center min-h-[90vh] bg-gray-50 sm:px-6 py-10'>
       <div className='w-full max-w-md bg-white p-6 sm:p-10 border border-gray-200 rounded-2xl shadow-xl' >
         <div className='text-center mb-8'>
-          <h2 className='text-xs font-black uppercase tracking-[0.3em] text-teal-600 mb-2'>AI Interviewer</h2>
+          <h2 className='text-xs font-black uppercase tracking-[0.3em] text-teal-600 mb-2'>LUMINA AI</h2>
           <h1 className='text-3xl sm:text-4xl font-black text-gray-900 leading-tight'>Welcome <span className='text-teal-500'>Back</span></h1>
           <p className='text-gray-500 mt-3 text-sm sm:text-base px-2'>
             Sign In to sharpen your technical skills.
@@ -84,7 +84,7 @@ const Login = () => {
 
           <div className='space-y-1'>
             <label className='text-[10px] font-bold uppercase text-gray-400 ml-1'>Email</label>
-            <input type="email" name="email" value={email} className='w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all ' placeholder='siddhant@gmail.com' onChange={onChange} required />
+            <input type="email" name="email" value={email} className='w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all ' placeholder='john@example.com' onChange={onChange} required />
 
           </div>
 
