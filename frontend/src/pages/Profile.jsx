@@ -88,12 +88,19 @@ const Profile = () => {
       const fetchAnalysis = async () => {
         setIsAnalyzing(true);
         try {
-            const history = completedSessions.slice(0, 5).map(s => ({
-                role: s.role,
-                technicalScore: s.technicalScore,
-                confidenceScore: s.confidenceScore,
-                aiFeedback: s.aiFeedback || ""
-            }));
+            const history = completedSessions.slice(0, 5).map(s => {
+                const aggregatedFeedback = (s.questions || [])
+                    .map(q => q.aiFeedback)
+                    .filter(fb => fb && fb !== "Not yet submitted or evaluated")
+                    .join(" | ");
+
+                return {
+                    role: s.role,
+                    technicalScore: s.metrics?.avgTechnical || 0,
+                    confidenceScore: s.metrics?.avgConfidence || 0,
+                    aiFeedback: aggregatedFeedback
+                };
+            });
             const res = await fetch(`${import.meta.env.VITE_API_URL}/sessions/analyze-profile`, {
                 method: 'POST',
                 headers: {
