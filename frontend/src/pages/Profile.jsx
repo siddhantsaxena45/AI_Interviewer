@@ -139,11 +139,6 @@ const Profile = () => {
   }
 
   // Analytics Computation
-  const completedSessions = useMemo(() => {
-    if (!sessions) return [];
-    return [...sessions].filter(s => s.status === 'completed').sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-  }, [sessions]);
-
   const totalInterviews = completedSessions.length;
   
   const avgScore = completedSessions.length 
