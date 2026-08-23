@@ -1,4 +1,4 @@
-﻿import uvicorn
+import uvicorn
 import os
 import io
 import json
@@ -256,43 +256,76 @@ async def transcribe_audio(file: UploadFile = File(...)):
             os.remove(temp_audio_path)
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/evaluate", response_model=EvaluationResponse)
-async def evaluate(request: EvaluationRequest):
+class EvaluationResponseWithTranscription(BaseModel):
+    technicalScore: int
+    confidenceScore: int
+    aiFeedback: str
+    idealAnswer: str
+    transcription: str = ""
+
+@app.post("/evaluate")
+async def evaluate(
+    role: str = Form(...),
+    level: str = Form(...),
+    question: str = Form(...),
+    question_type: str = Form("oral"),
+    user_answer: str = Form(""),
+    user_code: str = Form(""),
+    audioFile: UploadFile = File(None)
+):
+    temp_audio_path = None
+    uploaded_file = None
     try:
-        if request.question_type == "oral":
+        client = gemini_manager.get_client()
+        contents_list = []
+        
+        if audioFile and audioFile.filename:
+            audio_bytes = await audioFile.read()
+            if audio_bytes:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
+                    temp_audio_path = tmp.name
+                    tmp.write(audio_bytes)
+                uploaded_file = await client.aio.files.upload(file=temp_audio_path)
+                contents_list.append(uploaded_file)
+        
+        if question_type == "oral":
             assessment_instruction = (
-                "This is a conceptual oral question. Focus purely on candidate's verbal explanation. "
-                "Ignore any code blocks. "
-                "CRITICAL: If the transcript is empty, nonsense (e.g. 'blah blah','testing') or irrelevant to the question, SCORE 0."
+                "This is a conceptual oral question. Focus on the candidate's explanation. "
+                "CRITICAL: If the transcript/audio is empty, nonsense or irrelevant, SCORE 0."
             )
         else:
             assessment_instruction = (
                 "This is a coding challenge question. Evaluate the code logic and efficiency. "
-                "Use the transcription only for insight into their thought process. "
+                "Use the verbal explanation for insight into their thought process. "
                 "CRITICAL: If the code is 'undefined', empty, just random comments, or random characters, SCORE 0."
             )
         
         system_instruction = (
-            "You are a strict technical interviewer. "
-            "Do NOT hallucinate positive reviews for bad input. "
-            "RULE 1: If the answer is gibberish, irrelevant, or missing, return 'technicalScore':0 and 'confidenceScore':0. "
-            "RULE 2: For 'idealAnswer', provide a clean Markdown string. Do NOT return a nested JSON object. "
+            "You are a strict technical interviewer with an advanced multi-modal audio model. "
+            "Your tasks:\n"
+            "1. Transcribe the audio exactly if provided.\n"
+            "2. Evaluate the technical answer based on transcript and code.\n"
+            "3. Evaluate the confidenceScore (0-100) strictly based on vocal delivery in the audio: pacing, tone, hesitations (umm, ahh). If no audio, use the text transcript.\n"
+            "RULE 1: If the answer is gibberish, irrelevant, or missing, return 'technicalScore':0 and 'confidenceScore':0.\n"
+            "RULE 2: For 'idealAnswer', provide a clean Markdown string. Do NOT return a nested JSON object.\n"
             f"Context: {assessment_instruction}"
         )
         
         user_prompt = (
-            f"Role: {request.role}\n"
-            f"Question: {request.question}\n"
-            f"Level: {request.level}\n"
-            f"Verbal Answer: {request.user_answer or 'No verbal answer provided'}\n"
-            f"Code Answer: {request.user_code or 'No code provided'}\n"
+            f"Role: {role}\n"
+            f"Question: {question}\n"
+            f"Level: {level}\n"
+            f"Verbal Answer Text Fallback: {user_answer}\n"
+            f"Code Answer: {user_code}\n"
+            "Return JSON matching: technicalScore, confidenceScore, aiFeedback, idealAnswer, transcription (if audio was provided)."
         )
         
-        # We need the output to match the EvaluationResponse schema exactly
+        contents_list.append(user_prompt)
+        
         response = await generate_with_retry(
             client_manager=gemini_manager,
             model=GEMINI_MODEL_NAME,
-            contents=user_prompt,
+            contents=contents_list,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 temperature=0.1,
@@ -303,22 +336,34 @@ async def evaluate(request: EvaluationRequest):
                         "technicalScore": {"type": "INTEGER"},
                         "confidenceScore": {"type": "INTEGER"},
                         "aiFeedback": {"type": "STRING"},
-                        "idealAnswer": {"type": "STRING"}
+                        "idealAnswer": {"type": "STRING"},
+                        "transcription": {"type": "STRING"}
                     },
-                    "required": ["technicalScore", "confidenceScore", "aiFeedback", "idealAnswer"]
+                    "required": ["technicalScore", "confidenceScore", "aiFeedback", "idealAnswer", "transcription"]
                 }
             )
         )
         
+        if uploaded_file:
+            await client.aio.files.delete(name=uploaded_file.name)
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            os.remove(temp_audio_path)
+            
         response_text = response.text.strip()
         evaluation_data = json.loads(response_text)
                 
         if 'idealAnswer' in evaluation_data and not isinstance(evaluation_data['idealAnswer'], str):
             evaluation_data['idealAnswer'] = json.dumps(evaluation_data['idealAnswer'])
             
-        return EvaluationResponse(**evaluation_data)
+        return EvaluationResponseWithTranscription(**evaluation_data)
 
     except Exception as e:
+        if uploaded_file:
+            try:
+                await client.aio.files.delete(name=uploaded_file.name)
+            except: pass
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            os.remove(temp_audio_path)
         print(f"Failed to generate response: {e}")
         raise HTTPException(status_code=500, detail=str(e))
         
