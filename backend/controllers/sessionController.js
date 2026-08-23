@@ -205,51 +205,33 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
         return;
     }
 
-    // --- Phase 1: Transcription (Only if audio exists) ---
-    if (audioFilePath) {
-        try {
-            pushSocketUpdate(io, userId, sessionId, 'AI_TRANSCRIBING', `Transcribing audio for Q${questionIdx + 1}...`);
-            const formData = new FormData();
-            formData.append('file', fs.createReadStream(audioFilePath));
-
-            const transResponse = await fetchWithRetry(`${AI_SERVICE_URL}/transcribe`, {
-                method: 'POST',
-                body: formData,
-                headers: formData.getHeaders(),
-            });
-
-            const transData = await transResponse.json();
-            transcription = transData.transcription || "";
-        } catch (error) {
-            console.error(`Transcription Error: ${error.message}`);
-            // We continue even if transcription fails so the code can still be evaluated
-        } finally {
-            if (audioFilePath && fs.existsSync(audioFilePath)) fs.unlinkSync(audioFilePath);
-        }
-    }
-
-    // --- Phase 2: AI Evaluation ---
+    // --- Unified Phase: AI Evaluation with Audio ---
     try {
         pushSocketUpdate(io, userId, sessionId, 'AI_EVALUATING', `AI is analyzing Q${questionIdx + 1}...`);
+        
+        const formData = new FormData();
+        formData.append('role', session.role);
+        formData.append('level', session.level);
+        formData.append('question', question.questionText);
+        formData.append('question_type', question.questionType);
+        formData.append('user_answer', transcription || ""); // Fallback if needed
+        formData.append('user_code', code || "");
+        
+        if (audioFilePath && fs.existsSync(audioFilePath)) {
+            formData.append('audioFile', fs.createReadStream(audioFilePath));
+        }
 
         const evalResponse = await fetchWithRetry(`${AI_SERVICE_URL}/evaluate`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    question: question.questionText,
-                    question_type: question.questionType, // Tells AI if it should expect code
-                    role: session.role,
-                    level: session.level,
-                    user_answer: transcription, // Dedicated transcription field
-                    user_code: code || "",      // Dedicated code field
-                }),
-            });
+            method: 'POST',
+            body: formData,
+            headers: formData.getHeaders(),
+        });
 
         const evalData = await evalResponse.json();
 
         // --- Phase 3: Correct MongoDB Mapping ---
         // Store them strictly in their respective fields
-        question.userAnswerText = transcription; 
+        question.userAnswerText = evalData.transcription || ""; 
         question.userSubmittedCode = code || ""; 
 
         question.technicalScore = evalData.technicalScore;

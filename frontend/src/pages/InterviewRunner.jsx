@@ -78,6 +78,7 @@ function InterviewRunner() {
   const videoStreamRef = useRef(null);
   const detectionIntervalRef = useRef(null);
   const faceLossCounterRef = useRef(0);
+  const ttsAudioRef = useRef(null);
 
   const currentQuestion = useMemo(() => activeSession?.questions?.[currentQuestionIndex] || null, [activeSession?.questions, currentQuestionIndex]);
   const isReduxSubmitted = currentQuestion?.isSubmitted === true;
@@ -260,16 +261,43 @@ function InterviewRunner() {
   // TTS
   useEffect(() => {
     if (hasJoined && currentQuestion?.questionText && !isQuestionLocked && !isTerminated) {
-       window.speechSynthesis.cancel();
-       const msg = new SpeechSynthesisUtterance(currentQuestion.questionText);
-       msg.onstart = () => setIsSpeaking(true);
-       msg.onend = () => setIsSpeaking(false);
-       window.speechSynthesis.speak(msg);
+       if (ttsAudioRef.current) {
+           ttsAudioRef.current.pause();
+           ttsAudioRef.current = null;
+       }
+       setIsSpeaking(true);
+       const fetchTTS = async () => {
+           try {
+               const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || 'http://localhost:8000';
+               const res = await fetch(`${AI_SERVICE_URL}/tts`, {
+                   method: 'POST',
+                   headers: { 'Content-Type': 'application/json' },
+                   body: JSON.stringify({ text: currentQuestion.questionText })
+               });
+               if (!res.ok) throw new Error("TTS failed");
+               const blob = await res.blob();
+               const url = URL.createObjectURL(blob);
+               const audio = new Audio(url);
+               ttsAudioRef.current = audio;
+               audio.onended = () => setIsSpeaking(false);
+               audio.play();
+           } catch (e) {
+               console.error("TTS error:", e);
+               setIsSpeaking(false);
+           }
+       };
+       fetchTTS();
     }
-    return () => window.speechSynthesis.cancel();
+    return () => {
+        if (ttsAudioRef.current) {
+            ttsAudioRef.current.pause();
+            ttsAudioRef.current = null;
+        }
+        setIsSpeaking(false);
+    };
   }, [currentQuestionIndex, currentQuestion?.questionText, hasJoined, isQuestionLocked, isTerminated]);
 
-  const handleJoin = async () => {
+    const handleJoin = async () => {
       const elem = document.documentElement;
       if (elem.requestFullscreen) elem.requestFullscreen().catch(()=>{});
       try {
@@ -321,7 +349,10 @@ function InterviewRunner() {
     if (!draft?.code && !draft?.audioBlob) { toast.warning("Submit answer."); return; }
     
     setSubmittedLocal(p => ({ ...p, [currentQuestionIndex]: true }));
-    window.speechSynthesis.cancel(); 
+    if (ttsAudioRef.current) {
+        ttsAudioRef.current.pause();
+        ttsAudioRef.current = null;
+    }
     
     const formData = new FormData();
     formData.append('questionIndex', currentQuestionIndex);
@@ -337,7 +368,10 @@ function InterviewRunner() {
 
   const terminateInterview = () => {
     setIsTerminated(true);
-    window.speechSynthesis.cancel();
+    if (ttsAudioRef.current) {
+        ttsAudioRef.current.pause();
+        ttsAudioRef.current = null;
+    }
     if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
     
     // STOP CAMERA TRACKS IMMEDIATELY
