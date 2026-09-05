@@ -80,7 +80,7 @@ const Profile = () => {
 
   const completedSessions = useMemo(() => {
       if (!sessions) return [];
-      return [...sessions].filter(s => s.status === 'completed' && s.overallScore > 0).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      return [...sessions].filter(s => s.status === 'completed' && s.overallScore >= 0).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   }, [sessions]);
 
   useEffect(() => {
